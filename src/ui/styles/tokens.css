@@ -1,0 +1,157 @@
+/*
+ * RupAI design tokens (F0.02, Spec P5 §5 and §14).
+ *
+ * Every token is a CSS custom property on :root. `@theme static` also turns each one into a Tailwind utility
+ * (`bg-surface`, `text-fg-muted`, `rounded-md`, `shadow-overlay`, `text-lg`, …) and keeps the variable even when
+ * no utility uses it, so components can read `var(--…)` directly.
+ *
+ * Rules
+ * - Colours are named by role, never by appearance. Tailwind's default palette is switched off, so
+ *   `bg-slate-50` or `text-green-700` do not exist: pick the role (`bg-canvas`, `text-success`).
+ * - Colour never carries meaning on its own: a state or feedback colour always comes with a text label
+ *   (and an icon where there is room).
+ * - Every text pair listed in src/ui/tokens.ts meets WCAG AA (4.5:1 text, 3:1 UI); tokens.test.ts checks it.
+ *
+ * Values are placeholders derived from the RupAI dashboard until the designer's palette arrives (open item O-23).
+ * Change a value here only; nothing else hard-codes a colour.
+ */
+
+@theme static {
+  /* ---- Colour: neutrals --------------------------------------------------------------------------- */
+  --color-*: initial;
+
+  --color-canvas: #f8fafc; /* page background */
+  --color-surface: #ffffff; /* cards, panels, inputs */
+  --color-surface-subtle: #f1f5f9; /* table headers, hovered rows, read-only fields */
+  --color-surface-inverse: #1e293b; /* tooltips, the environment banner */
+
+  --color-fg: #1e293b; /* primary text */
+  --color-fg-muted: #475569; /* secondary text, labels */
+  --color-fg-subtle: #5b6678; /* hints, placeholders, metadata */
+  --color-fg-on-primary: #ffffff; /* text on primary and on solid feedback colours */
+  --color-fg-inverse: #f8fafc; /* text on surface-inverse */
+
+  --color-line: #e2e8f0; /* decorative dividers and card borders */
+  --color-line-strong: #7c8799; /* borders that identify a control (inputs, checkboxes): 3:1 */
+
+  /* ---- Colour: brand and interaction ---------------------------------------------------------------- */
+  --color-primary: #1b5e4b; /* primary actions, links, the active nav item */
+  --color-primary-hover: #134438;
+  --color-primary-subtle: #e8f5f0; /* selected rows, the active nav background */
+  --color-primary-strong: #134438; /* text on primary-subtle */
+  --color-focus: #2a7a62; /* the focus ring */
+
+  /* ---- Colour: feedback (solid = text/icon on surface, or a background behind fg-on-primary) ------------ */
+  --color-success: #13703a;
+  --color-success-subtle: #ecfdf3;
+  --color-warning: #8a3b0b;
+  --color-warning-subtle: #fffaeb;
+  --color-danger: #b42318;
+  --color-danger-subtle: #fef3f2;
+  --color-info: #175cd3;
+  --color-info-subtle: #eff8ff;
+
+  /* ---- Colour: document states (Spec P5 §5; always shown with the state's label) --------------------------- */
+  --color-state-draft: #475569;
+  --color-state-draft-subtle: #f1f5f9;
+  --color-state-submitted: #1d4ed8;
+  --color-state-submitted-subtle: #eff6ff;
+  --color-state-approved: #15803d;
+  --color-state-approved-subtle: #f0fdf4;
+  --color-state-posted: #6d28d9;
+  --color-state-posted-subtle: #f5f3ff;
+  --color-state-rejected: #b91c1c;
+  --color-state-rejected-subtle: #fef2f2;
+  --color-state-cancelled: #57534e;
+  --color-state-cancelled-subtle: #e7e5e4;
+
+  /* ---- Typography --------------------------------------------------------------------------------------- */
+  --font-*: initial;
+  /* Inter for Latin; the browser falls back glyph by glyph to Noto Sans Bengali for worker and estate names. */
+  --font-sans:
+    'Inter Variable', 'Noto Sans Bengali Variable', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo, Consolas, monospace;
+
+  /* Type scale: ratio 1.200 (minor third) from a 16 px base. Body text is text-base, never smaller on mobile. */
+  --text-*: initial;
+  --text-xs: 0.694rem; /* 11.1 px: captions only, never body text */
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.833rem; /* 13.3 px: metadata, table secondary text */
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem; /* 16 px: body text, inputs */
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.2rem; /* 19.2 px */
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.44rem; /* 23 px: section titles */
+  --text-xl--line-height: 2rem;
+  --text-2xl: 1.728rem; /* 27.6 px: page titles */
+  --text-2xl--line-height: 2.25rem;
+  --text-3xl: 2.074rem; /* 33.2 px */
+  --text-3xl--line-height: 2.5rem;
+  --text-4xl: 2.488rem; /* 39.8 px: dashboard figures */
+  --text-4xl--line-height: 3rem;
+
+  /* ---- Spacing: a 4 px grid. `p-1` = 4 px, `p-4` = 16 px, `gap-6` = 24 px ------------------------------------- */
+  --spacing: 0.25rem;
+
+  /* ---- Radii ---------------------------------------------------------------------------------------------- */
+  --radius-*: initial;
+  --radius-sm: 0.25rem; /* 4 px: badges, tags */
+  --radius-md: 0.375rem; /* 6 px: buttons, inputs */
+  --radius-lg: 0.5rem; /* 8 px: cards */
+  --radius-xl: 0.75rem; /* 12 px: modals, drawers */
+  --radius-full: 9999px; /* pills, avatars */
+
+  /* ---- Shadows (elevation) --------------------------------------------------------------------------------- */
+  --shadow-*: initial;
+  --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.06); /* cards */
+  --shadow-md: 0 4px 8px -2px rgb(15 23 42 / 0.1), 0 2px 4px -2px rgb(15 23 42 / 0.06); /* raised, hover */
+  --shadow-lg:
+    0 12px 16px -4px rgb(15 23 42 / 0.1), 0 4px 6px -2px rgb(15 23 42 / 0.05); /* menus, popovers */
+  --shadow-overlay: 0 24px 48px -12px rgb(15 23 42 / 0.25); /* modals, drawers */
+
+  /* ---- Breakpoints, mobile-first: base (below 640), sm, md, lg, xl -------------------------------------------- */
+  --breakpoint-*: initial;
+  --breakpoint-sm: 40rem; /* 640 px */
+  --breakpoint-md: 48rem; /* 768 px: touch targets may shrink from here up */
+  --breakpoint-lg: 64rem; /* 1024 px: the sidebar becomes permanent */
+  --breakpoint-xl: 80rem; /* 1280 px */
+
+  /* ---- Sizes ---------------------------------------------------------------------------------------------- */
+  --size-touch-target: 2.75rem; /* 44 px: minimum below md */
+  --size-control: 2.25rem; /* 36 px: control height from md up */
+
+  /* ---- Z-index layers: use as `z-(--z-modal)`; never a bare number ------------------------------------------- */
+  --z-base: 0;
+  --z-raised: 10; /* sticky table header and first column */
+  --z-sticky: 100; /* top bar */
+  --z-banner: 200; /* environment banner */
+  --z-dropdown: 1000; /* menus, combobox lists, popovers */
+  --z-overlay: 1100; /* modal and drawer backdrop */
+  --z-modal: 1200; /* modal and drawer */
+  --z-toast: 1300;
+  --z-tooltip: 1400;
+
+  /* ---- Motion: use as `duration-(--duration-fast)`. Collapsed to 0 under prefers-reduced-motion ---------------- */
+  --duration-instant: 0ms;
+  --duration-fast: 120ms; /* hover, focus, small state changes */
+  --duration-base: 200ms; /* menus, tooltips, accordions */
+  --duration-slow: 320ms; /* drawers, modals, page-level transitions */
+  --ease-*: initial;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}
+
+/* Money and quantity figures: tabular (equal-width) digits so columns line up. Use on every money/qty cell. */
+@utility figures {
+  font-variant-numeric: tabular-nums lining-nums;
+}

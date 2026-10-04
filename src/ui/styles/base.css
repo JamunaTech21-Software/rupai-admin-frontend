@@ -1,0 +1,43 @@
+/*
+ * Base element styles built on the tokens (F0.02). Components (F0.03+) refine these; nothing here hard-codes
+ * a colour or a size that has a token.
+ */
+@layer base {
+  html {
+    /* 16 px, and the user's own browser font size is respected. */
+    font-size: 100%;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    /* Body text is never below 16 px, on mobile or anywhere else. */
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* One visible focus ring for every focusable element, keyboard only (Spec P5 §6.6). */
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* Touch targets are at least 44 × 44 px below md (768 px). Checkboxes and radios get the same size from the
+   * label that wraps them (F0.04). */
+  @media (width < 48rem) {
+    button,
+    [role='button'],
+    select,
+    summary,
+    input:not([type='checkbox'], [type='radio'], [type='hidden'], [type='range']) {
+      min-height: var(--size-touch-target);
+    }
+
+    button,
+    [role='button'] {
+      min-width: var(--size-touch-target);
+    }
+  }
+}

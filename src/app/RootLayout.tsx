@@ -10,7 +10,7 @@ export function RouteFallback() {
     <div
       role="status"
       aria-live="polite"
-      className="flex min-h-screen items-center justify-center text-slate-600"
+      className="flex min-h-screen items-center justify-center text-fg-muted"
     >
       Loading…
     </div>

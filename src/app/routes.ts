@@ -1,5 +1,6 @@
 import { type RouteObject } from 'react-router';
 
+import { designSystemRoutes } from '@/features/design-system';
 import { homeRoutes } from '@/features/home';
 
 import { RootLayout, RouteFallback } from './RootLayout';
@@ -14,6 +15,6 @@ export const routes: RouteObject[] = [
     path: '/',
     Component: RootLayout,
     HydrateFallback: RouteFallback,
-    children: [...homeRoutes],
+    children: [...homeRoutes, ...designSystemRoutes],
   },
 ];

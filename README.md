@@ -58,7 +58,7 @@ Then `http://localhost:5173/health/ready` should answer `{"data":{"status":"read
 ```
 src/
   app/                    Composition root: entry (main.tsx), route tree, layouts, global CSS
-  ui/                     The component library (F0.03–F0.05)
+  ui/                     Design tokens (styles/, tokens.ts) and the component library (F0.03–F0.05)
   lib/                    api, query client, auth, money, dates, i18n (env.ts today)
   features/<module>/
     api/                  Data access for the feature (hooks over the API client)
@@ -90,6 +90,32 @@ comes through the feature's `api/` hooks.
 `parseFloat`, `Number.parseFloat` and `Number(...)` are lint errors: money and quantities travel as decimal
 strings and are handled by the decimal helpers (F0.04, F0.06). A genuine non-money use needs an
 `eslint-disable-next-line` comment that says why.
+
+## Design tokens (F0.02)
+
+All visual values live in `src/ui/styles/tokens.css` as CSS custom properties on `:root`, and each one is also a
+Tailwind utility. The live reference is at **http://localhost:5173/design/tokens**: every token, its value, its use,
+and every contrast pair measured in the browser.
+
+- **Colours are named by role, never appearance.** Tailwind's default palette is switched off: use `bg-canvas`,
+  `bg-surface`, `text-fg`, `text-fg-muted`, `border-line`, `bg-primary`, `text-danger`,
+  `bg-state-approved-subtle` and so on. `tests/role-colours.test.ts` fails on `bg-slate-50`-style classes and
+  hard-coded colours.
+- **Colour never carries meaning on its own:** a state or feedback colour always comes with its label.
+- **Contrast:** every pair in `CONTRAST_PAIRS` (`src/ui/tokens.ts`) meets WCAG AA (4.5:1 text, 3:1 borders and
+  focus). `src/ui/tokens.test.ts` checks the values; the Playwright run checks the rendered page with axe.
+- **Type scale:** ratio 1.200 from 16 px (`text-xs` … `text-4xl`). Body text is `text-base` (16 px), never smaller.
+- **Fonts:** Inter for Latin and Noto Sans Bengali for Bengali names, self-hosted through Fontsource (no font
+  server). Put `figures` on every money and quantity cell for tabular digits.
+- **Spacing** is a 4 px grid (`p-1` = 4 px). **Radii** `rounded-sm|md|lg|xl|full`, **shadows**
+  `shadow-sm|md|lg|overlay`.
+- **Breakpoints, mobile-first:** `sm` 640, `md` 768, `lg` 1024, `xl` 1280. Below `md`, buttons and inputs are at
+  least 44 px tall (`--size-touch-target`).
+- **Layers and motion:** `z-(--z-modal)`, `duration-(--duration-fast)` and so on; never a bare z-index or duration.
+  Durations collapse to 0 under `prefers-reduced-motion`.
+
+The palette is a placeholder taken from the RupAI dashboard until the designer delivers it (open item O-23). To
+change a colour, change it in `tokens.css` only, and keep `npm test` green.
 
 ## Configuration
 

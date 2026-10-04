@@ -1,17 +1,3 @@
 @import 'tailwindcss';
-
-/*
- * Placeholder brand values carried over from the RupAI dashboard design. F0.02 replaces these with the
- * full token set: role-named colours, state colours, type scale, spacing, radii and so on (open item O-23).
- */
-@theme {
-  --color-primary: #1b5e4b;
-  --color-primary-dark: #134438;
-  --color-primary-light: #2a7a62;
-  --color-primary-muted: #e8f5f0;
-  --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-}
-
-body {
-  @apply bg-slate-50 font-sans text-slate-700 antialiased;
-}
+@import '../ui/styles/tokens.css';
+@import '../ui/styles/base.css';

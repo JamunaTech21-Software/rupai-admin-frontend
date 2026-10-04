@@ -4,6 +4,9 @@ import { createBrowserRouter } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 
 import { routes } from './routes';
+// Self-hosted fonts (no third-party font server): Inter for Latin, Noto Sans Bengali for Bengali names.
+import '@fontsource-variable/inter/wght.css';
+import '@fontsource-variable/noto-sans-bengali/wght.css';
 import './index.css';
 
 const container = document.getElementById('root');
