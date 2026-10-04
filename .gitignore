@@ -1,0 +1,24 @@
+node_modules
+dist
+coverage
+*.tsbuildinfo
+.vite
+
+# Local environment overrides (never commit; .env.example is the documented template)
+.env
+.env.local
+.env.*.local
+
+# Playwright
+test-results
+playwright-report
+blob-report
+playwright/.cache
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
+*.log
