@@ -1,7 +1,21 @@
-import { Outlet } from 'react-router';
+import { Outlet, useHref, useNavigate } from 'react-router';
+
+import { EnvironmentBanner } from '@/features/system';
+import { UiProvider } from '@/ui';
 
 export function RootLayout() {
-  return <Outlet />;
+  const navigate = useNavigate();
+  return (
+    <UiProvider
+      navigate={(path) => {
+        void navigate(path);
+      }}
+      useHref={useHref}
+    >
+      <EnvironmentBanner />
+      <Outlet />
+    </UiProvider>
+  );
 }
 
 /** Shown while the first lazy route chunk loads. */

@@ -1,0 +1,35 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Introduction" />
+
+# RupAI component library
+
+The building blocks of every RupAI screen. Each component is shown here in every state that applies to it:
+default, hover, focus, disabled, error, loading and empty. Each page lists the component's props (generated from
+its TypeScript types) and its **usage rules**.
+
+- **Built on** [React Aria Components](https://react-spectrum.adobe.com/react-aria/) (decision O-22) for behaviour
+  and accessibility, styled with the design tokens (see _Foundations / Design tokens_).
+- **Import** everything from `@/ui`. Features never import `react-aria-components` or `lucide-react` directly
+  (enforced by lint).
+
+## Accessibility baseline (applies to every component)
+
+| Requirement                        | How it is met                                                                                                                |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Keyboard operable                  | Every control works with Tab, Shift+Tab, Enter and Space (React Aria). Stories with a `play` function prove it.              |
+| Visible focus ring                 | A 2 px `--color-focus` outline, offset 2 px, on keyboard focus only (`:focus-visible` / `data-focus-visible`). 3:1 contrast. |
+| Correct roles and names            | Native elements first; IconButton requires a `label`; Icon is decorative unless labelled; Avatar is named or decorative.     |
+| Focus trapping and restore         | Overlays (Modal, Drawer, menus; F0.05) trap focus and return it to the trigger, using React Aria's FocusScope.               |
+| Live regions                       | `announce(message, 'polite' \| 'assertive')` from `@/ui`; Spinner announces as a status; Skeleton regions use `aria-busy`.   |
+| Reduced motion                     | Durations collapse to 0 ms and spinners and skeletons stop animating under `prefers-reduced-motion`.                         |
+| Colour never carries meaning alone | Badges need a label and each state has its own icon; inline links are underlined.                                            |
+| Touch targets                      | Below 768 px every button, input and standalone link is at least 44 × 44 px.                                                 |
+| Contrast                           | Every token pair meets WCAG AA (4.5:1 text, 3:1 UI), checked in unit tests and by axe.                                       |
+
+## How it is checked
+
+- The **Accessibility** panel on each story runs axe; any violation fails the story (`a11y.test: 'error'`).
+- `npm test` renders every story and runs axe on it, and runs each story's keyboard `play` function.
+- `npm run test:storybook` builds this workspace and runs axe on every story in a real browser (including colour
+  contrast).

@@ -20,7 +20,9 @@ describe('TokensPage', () => {
   it('labels every document state, so colour never stands alone', () => {
     render(<TokensPage />, { wrapper: MemoryRouter });
     const badges = within(screen.getByRole('list', { name: 'Document state badges' }));
-    for (const state of DOCUMENT_STATES) expect(badges.getByText(state)).toBeInTheDocument();
+    for (const state of DOCUMENT_STATES) {
+      expect(badges.getByText(new RegExp(`^${state}$`, 'i'))).toBeInTheDocument();
+    }
   });
 
   it('lists every contrast pair', () => {

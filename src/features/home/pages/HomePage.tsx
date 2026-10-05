@@ -1,21 +1,22 @@
-import { Link } from 'react-router';
-
 import { config } from '@/lib/env';
+import { describeMockSetting, mockSetting } from '@/lib/mocks';
+import { Badge, Link } from '@/ui';
 
 import { type ScaffoldFact } from '../types';
 
 const NEXT_STEPS = [
-  'F0.03–F0.05 Component library',
+  'F0.05 Data display, feedback and layout',
   'F0.06 Data layer and API client',
   'F0.07 App shell, routing, auth shell and localisation',
 ];
 
-/** Placeholder home page (F0.01, F0.02). The application shell (F0.07) replaces it. */
+/** Placeholder home page (F0.01–F0.03). The application shell (F0.07) replaces it. */
 export function HomePage() {
   const facts: ScaffoldFact[] = [
     { label: 'Environment', value: config.mode },
     { label: 'API base URL', value: config.apiBaseUrl },
-    { label: 'Milestone', value: 'F0.02 Design tokens, typography & breakpoints' },
+    { label: 'Mocked APIs', value: describeMockSetting(mockSetting) },
+    { label: 'Milestone', value: 'F0.04 Forms · P0.08 Backend connection' },
   ];
 
   return (
@@ -36,12 +37,7 @@ export function HomePage() {
         </header>
 
         <div className="space-y-6 px-6 py-6 sm:px-8">
-          <p className="inline-flex items-center gap-2 rounded-full bg-primary-subtle px-3 py-1 text-sm font-medium text-primary-strong">
-            <svg aria-hidden="true" viewBox="0 0 20 20" className="size-4 fill-current">
-              <path d="M8.1 13.6 4.5 10l-1.4 1.4 5 5 9-9-1.4-1.4z" />
-            </svg>
-            Frontend scaffold is running
-          </p>
+          <Badge tone="success" label="Frontend is running" />
 
           <dl className="divide-y divide-line rounded-lg border border-line">
             {facts.map((fact) => (
@@ -53,10 +49,7 @@ export function HomePage() {
           </dl>
 
           <p>
-            <Link
-              to="/design/tokens"
-              className="inline-flex min-h-(--size-touch-target) items-center font-medium text-primary underline underline-offset-4 hover:text-primary-hover md:min-h-0"
-            >
+            <Link href="/design/tokens" variant="standalone">
               View the design tokens
             </Link>
           </p>

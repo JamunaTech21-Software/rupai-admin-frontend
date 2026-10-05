@@ -22,3 +22,6 @@ playwright/.cache
 .DS_Store
 Thumbs.db
 *.log
+
+# Storybook
+storybook-static

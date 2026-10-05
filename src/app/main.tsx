@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { createBrowserRouter } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 
+import { startMocking } from './mocks';
 import { routes } from './routes';
 // Self-hosted fonts (no third-party font server): Inter for Latin, Noto Sans Bengali for Bengali names.
 import '@fontsource-variable/inter/wght.css';
@@ -14,8 +15,11 @@ if (!container) throw new Error('The #root element is missing from index.html.')
 
 const router = createBrowserRouter(routes);
 
-createRoot(container).render(
-  <StrictMode>
-    <RouterProvider router={router} />
-  </StrictMode>,
-);
+// In development, MSW must be listening before the first request (VITE_MOCK_API). Elsewhere this resolves at once.
+void startMocking().finally(() => {
+  createRoot(container).render(
+    <StrictMode>
+      <RouterProvider router={router} />
+    </StrictMode>,
+  );
+});

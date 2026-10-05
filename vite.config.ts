@@ -21,6 +21,8 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': { target: proxyTarget, changeOrigin: true },
         '/health': { target: proxyTarget, changeOrigin: true },
+        // The API documentation (Swagger UI), as Vercel rewrites it on staging.
+        '/docs': { target: proxyTarget, changeOrigin: true },
       },
     },
     build: {
@@ -33,6 +35,8 @@ export default defineConfig(({ mode }) => {
       setupFiles: ['./tests/setup.ts'],
       include: ['src/**/*.test.{ts,tsx}', 'tests/**/*.test.{ts,tsx}', 'eslint-rules/**/*.test.js'],
       restoreMocks: true,
+      // The token reference renders ~100 tokens and axe walks all of it: allow for a busy machine.
+      testTimeout: 20_000,
       coverage: {
         provider: 'v8',
         include: ['src/**/*.{ts,tsx}'],

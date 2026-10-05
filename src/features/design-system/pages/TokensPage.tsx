@@ -1,11 +1,10 @@
-import { Link } from 'react-router';
-
 import {
   ALL_TOKENS,
   BREAKPOINT_TOKENS,
   COLOR_GROUPS,
   CONTRAST_PAIRS,
   FONT_TOKENS,
+  Link,
   MOTION_TOKENS,
   RADIUS_TOKENS,
   SHADOW_TOKENS,
@@ -34,7 +33,7 @@ export function TokensPage() {
     <main className="mx-auto max-w-6xl space-y-6 p-4 sm:p-8">
       <header className="space-y-2">
         <p>
-          <Link to="/" className="text-primary underline underline-offset-4 hover:text-primary-hover">
+          <Link href="/" variant="standalone">
             Home
           </Link>
         </p>
