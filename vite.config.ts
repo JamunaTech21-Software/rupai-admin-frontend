@@ -33,6 +33,8 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       setupFiles: ['./tests/setup.ts'],
+      // Node's fetch needs absolute URLs: in tests the API lives at http://localhost/api/v1 (MSW answers it).
+      env: { VITE_API_BASE_URL: 'http://localhost/api/v1' },
       include: ['src/**/*.test.{ts,tsx}', 'tests/**/*.test.{ts,tsx}', 'eslint-rules/**/*.test.js'],
       restoreMocks: true,
       // The token reference renders ~100 tokens and axe walks all of it: allow for a busy machine.

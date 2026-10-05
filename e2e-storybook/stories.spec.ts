@@ -30,7 +30,8 @@ interface PreviewWindow {
 for (const story of stories) {
   test(`${story.title} › ${story.name} has no WCAG AA violations`, async ({ page }) => {
     await page.goto(`/iframe.html?id=${story.id}&viewMode=story`);
-    await page.locator('#storybook-root > *').first().waitFor();
+    // React Aria collections (ComboBox, Tree) put hidden helpers first in the root: wait for visible content.
+    await page.locator('#storybook-root :visible').first().waitFor();
     // Storybook runs the story's play function on load. Wait until it has finished, so axe sees the settled
     // page rather than a keyboard interaction half-way through; a play function that errors fails the test.
     const phase = await page

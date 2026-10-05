@@ -4,6 +4,12 @@
   "private": true,
   "description": "RupAI — Integrated Tea Estate ERP web app (React + TypeScript + Vite)",
   "type": "module",
+  "sideEffects": [
+    "*.css",
+    "src/app/main.tsx",
+    "src/lib/i18n/index.ts",
+    "src/ui/toastQueue.ts"
+  ],
   "engines": {
     "node": ">=24.0.0 <25"
   },
@@ -42,12 +48,16 @@
     "@fontsource-variable/noto-sans-bengali": "5.3.0",
     "@hookform/resolvers": "5.9.1",
     "@internationalized/date": "3.12.4",
+    "@tanstack/react-query": "^5.104.1",
+    "@tanstack/react-table": "^8.21.3",
     "decimal.js": "10.6.0",
+    "i18next": "^26.4.2",
     "lucide-react": "1.52.0",
     "react": "19.3.0",
     "react-aria-components": "1.21.1",
     "react-dom": "19.3.0",
     "react-hook-form": "7.89.0",
+    "react-i18next": "^17.0.15",
     "react-router": "8.4.0",
     "zod": "4.6.5"
   },

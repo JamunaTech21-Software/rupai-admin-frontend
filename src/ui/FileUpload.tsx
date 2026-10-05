@@ -6,6 +6,7 @@ import { Button } from './Button';
 import { cx } from './cx';
 import { Icon } from './Icon';
 import { IconButton } from './IconButton';
+import { useUiText } from './uiText';
 
 export interface UploadFile {
   /** Stable id for the list (generated when the file is added). */
@@ -77,24 +78,25 @@ export function FileUpload({
   onFilesChange,
   className,
 }: FileUploadProps) {
+  const text = useUiText();
   const id = useId();
   const [refused, setRefused] = useState<string[]>([]);
-  const rules = `${accept.join(', ')} · up to ${formatBytes(maxSizeBytes)}${multiple ? ' each' : ''}`;
+  const rules = text.fileRules(accept.join(', '), formatBytes(maxSizeBytes), multiple);
 
   function addFiles(incoming: File[]) {
     const accepted: UploadFile[] = [];
     const problems: string[] = [];
     for (const file of incoming) {
-      if (!matchesType(file, accept)) problems.push(`${file.name}: this file type is not accepted.`);
+      if (!matchesType(file, accept)) problems.push(text.fileTypeRefused(file.name));
       else if (file.size > maxSizeBytes) {
-        problems.push(`${file.name}: larger than ${formatBytes(maxSizeBytes)} (${formatBytes(file.size)}).`);
+        problems.push(text.fileTooLarge(file.name, formatBytes(maxSizeBytes), formatBytes(file.size)));
       } else accepted.push({ id: newId(), file, status: 'pending' });
     }
     setRefused(problems);
     if (problems.length > 0) announce(problems.join(' '), 'assertive');
     if (accepted.length > 0) {
       onFilesChange(multiple ? [...files, ...accepted] : accepted.slice(0, 1));
-      announce(`${accepted.length} file${accepted.length === 1 ? '' : 's'} added.`);
+      announce(text.filesAdded(accepted.length));
     }
   }
 
@@ -131,7 +133,7 @@ export function FileUpload({
         )}
       >
         <Icon name="upload" size="lg" className="text-fg-muted" />
-        <p className="text-fg">Drop files here, or</p>
+        <p className="text-fg">{text.dropFilesHere}</p>
         <FileTrigger
           acceptedFileTypes={[...accept]}
           allowsMultiple={multiple}
@@ -140,7 +142,7 @@ export function FileUpload({
           }}
         >
           <Button variant="secondary" size="sm" isDisabled={isDisabled} iconStart="file">
-            Choose {multiple ? 'files' : 'a file'}
+            {multiple ? text.chooseFiles : text.chooseFile}
           </Button>
         </FileTrigger>
         <p className="text-sm text-fg-muted">{rules}</p>
@@ -167,7 +169,7 @@ export function FileUpload({
 
       {files.length > 0 ? (
         <ul
-          aria-label="Attached files"
+          aria-label={text.attachedFiles}
           className="flex flex-col divide-y divide-line rounded-md border border-line"
         >
           {files.map((item) => (
@@ -181,7 +183,7 @@ export function FileUpload({
                 {item.status === 'uploading' && item.progress !== undefined ? (
                   <ProgressBar
                     value={item.progress}
-                    aria-label={`Uploading ${item.file.name}`}
+                    aria-label={text.uploading(item.file.name)}
                     className="w-full"
                   >
                     {({ percentage }) => (
@@ -194,17 +196,19 @@ export function FileUpload({
                     )}
                   </ProgressBar>
                 ) : null}
-                {item.status === 'done' ? <span className="text-sm text-success">Uploaded</span> : null}
+                {item.status === 'done' ? (
+                  <span className="text-sm text-success">{text.uploaded}</span>
+                ) : null}
                 {item.error ? <span className="text-sm text-danger">{item.error}</span> : null}
               </div>
               <IconButton
                 icon="close"
                 size="sm"
-                label={`Remove ${item.file.name}`}
+                label={text.remove(item.file.name)}
                 isDisabled={isDisabled}
                 onPress={() => {
                   onFilesChange(files.filter((f) => f.id !== item.id));
-                  announce(`${item.file.name} removed.`);
+                  announce(text.fileRemoved(item.file.name));
                 }}
               />
             </li>

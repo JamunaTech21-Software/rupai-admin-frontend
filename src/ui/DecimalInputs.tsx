@@ -11,6 +11,7 @@ import {
 
 import { Input } from './Input';
 import { type FieldProps } from './fieldStyles';
+import { useUiText } from './uiText';
 
 interface DecimalFieldProps extends FieldProps {
   /** A decimal string ("12345.6700") or null. Never a number. */
@@ -47,6 +48,7 @@ function DecimalField({
   label,
   ...rest
 }: DecimalFieldProps & { readonly config: DecimalFieldConfig }) {
+  const text = useUiText();
   const [focused, setFocused] = useState(false);
   const [draft, setDraft] = useState('');
   const rules = { scale: config.maxScale, intDigits: DECIMAL_KINDS[config.kind].intDigits, allowNegative };
@@ -67,7 +69,7 @@ function DecimalField({
       autoComplete="off"
       startAdornment={config.prefix}
       endAdornment={config.suffix}
-      hint={rest.hint ?? `In ${config.unitLabel}.`}
+      hint={rest.hint ?? text.inUnit(config.unitLabel)}
       onFocus={() => {
         setDraft(value ?? '');
         setFocused(true);
@@ -99,12 +101,8 @@ export interface MoneyInputProps extends DecimalFieldProps {
  * A money amount as a decimal string. "12345.6700" in comes out unchanged unless edited, and shows as
  * "12,345.67". Never swap it for a generic number input: floats corrupt money.
  */
-export function MoneyInput({
-  scale = 2,
-  currencySymbol = '৳',
-  currencyName = 'Taka',
-  ...props
-}: MoneyInputProps) {
+export function MoneyInput({ scale = 2, currencySymbol = '৳', currencyName, ...props }: MoneyInputProps) {
+  const text = useUiText();
   return (
     <DecimalField
       {...props}
@@ -113,7 +111,7 @@ export function MoneyInput({
         maxScale: scale,
         minDisplayScale: 2,
         prefix: currencySymbol,
-        unitLabel: currencyName,
+        unitLabel: currencyName ?? text.currencyName,
       }}
     />
   );
@@ -126,11 +124,18 @@ export interface QuantityInputProps extends DecimalFieldProps {
 }
 
 /** A quantity or weight to the gram: 3 decimal places, shown with its unit ("1,250.500 kg"). */
-export function QuantityInput({ unit = 'kg', unitName = 'kilograms', ...props }: QuantityInputProps) {
+export function QuantityInput({ unit = 'kg', unitName, ...props }: QuantityInputProps) {
+  const text = useUiText();
   return (
     <DecimalField
       {...props}
-      config={{ kind: 'qty', maxScale: 3, minDisplayScale: 3, suffix: unit, unitLabel: unitName }}
+      config={{
+        kind: 'qty',
+        maxScale: 3,
+        minDisplayScale: 3,
+        suffix: unit,
+        unitLabel: unitName ?? text.kilograms,
+      }}
     />
   );
 }

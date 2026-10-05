@@ -108,3 +108,38 @@ export function toTime(value: string | null | undefined): Time | null {
 export function fromTime(time: Time | null | undefined): string | null {
   return time ? time.toString().slice(0, 5) : null;
 }
+
+// ---- Display ----------------------------------------------------------------------------------------------
+// Until F0.07 brings the app locale (en / bn), dates read day-month-year in English: "4 Oct 2026".
+
+// A CalendarDate becomes UTC midnight for Intl, so it is formatted in UTC: the day can never move.
+const DATE_FORMAT = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+/** A business date for display: "2026-10-04" → "4 Oct 2026". Formatted as a calendar date, so no drift. */
+export function formatBusinessDate(value: string): string {
+  const date = toCalendarDate(value);
+  return date ? DATE_FORMAT.format(date.toDate('UTC')) : value;
+}
+
+/**
+ * An instant (an ISO timestamp from the API, e.g. `approved_at`) in the estate's timezone:
+ * "2026-10-04T08:05:00Z" → "4 Oct 2026, 14:05".
+ */
+export function formatDateTime(iso: string, timeZone: string = APP_TIMEZONE, locale = 'en-GB'): string {
+  const instant = new Date(iso);
+  if (Number.isNaN(instant.getTime())) return iso;
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone,
+  }).format(instant);
+}

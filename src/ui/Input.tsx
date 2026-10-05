@@ -49,7 +49,8 @@ export function Input({
 }: InputProps) {
   return (
     <TextField
-      value={value ?? ''}
+      // Controlled only when given a value (null = empty); without one the input keeps what is typed.
+      {...(value !== undefined ? { value: value ?? '' } : {})}
       {...(onChange ? { onChange } : {})}
       {...(onBlur ? { onBlur } : {})}
       {...(onFocus ? { onFocus } : {})}

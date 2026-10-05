@@ -228,6 +228,25 @@ keep values as strings. Decimal maths goes through `@/lib/money` (`Dec`, `format
 
 See _Forms / Form example_ in Storybook for a complete form with line items and server errors.
 
+## App shell, sign-in and languages (F0.07)
+
+- **Routes** (`src/app/routes.tsx`): four layouts — Public (sign in, forgot/reset password), Application (sidebar
+  and top bar), Focused (change password) and Print. Every route has its own error boundary, so a crash shows an
+  error in that page only. `/forbidden`, `/error?ref=…` and unknown addresses (404) render inside the app.
+- **Session** (`lib/auth`): on start the app refreshes from the HttpOnly cookie, reads `/auth/me`, then renders.
+  Without a session every protected address redirects to `/login?returnTo=…`; a temporary password must be
+  changed first. Signing out clears the whole query cache.
+- **Permissions**: gate UI only with `<Can permission="user.view">` or `usePermission()`. The sidebar
+  (`src/app/navigation.ts`) lists each entry's permission and shows only what the user holds; the route behind it
+  has the same guard (`RequirePermission` → 403 page).
+- **Page states** (`@/features/system`): `PageLoading`, `PageEmpty` (new / no-results / done / scope),
+  `PageError` (with request id), `RefusalDialog`, `PermissionNotice`.
+- **Languages**: English and বাংলা (`lib/i18n/locales`, same keys enforced by the type checker). No literal words
+  in screens — lint fails on them; use `t()`. Format numbers, money, quantities and dates with `useFormat()`
+  (Bangla uses Bengali digits and lakh grouping). The switch is in the top bar and on the sign-in page.
+- **Without the backend**: `VITE_MOCK_API=auth,jobs npm run dev` and sign in as `manager` (everything), `viewer`
+  (no permissions) or `trainee` (must change password); password `Demo-Password-1`.
+
 ## Configuration
 
 Only `VITE_*` variables reach the browser, so none of them may hold a secret. `src/lib/env.ts` validates them at

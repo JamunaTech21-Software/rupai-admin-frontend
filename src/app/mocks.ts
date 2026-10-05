@@ -9,6 +9,9 @@ import { isFeatureMocked, type MockSetting, mockSetting } from '@/lib/mocks';
  */
 const FEATURE_MOCKS: Record<string, () => Promise<{ handlers: RequestHandler[] }>> = {
   system: loadSystemMocks,
+  // Contract mocks from lib (F0.06): demo sign-in (manager / viewer) and background jobs.
+  auth: () => import('@/lib/mocking/contract').then((m) => ({ handlers: m.authMocks() })),
+  jobs: () => import('@/lib/mocking/contract').then((m) => ({ handlers: m.jobMocks() })),
 };
 
 /**

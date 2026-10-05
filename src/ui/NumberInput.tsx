@@ -41,7 +41,8 @@ export function NumberInput({
 }: NumberInputProps) {
   return (
     <NumberField
-      value={value ?? Number.NaN}
+      // Controlled only when given a value (null = empty, which React Aria spells NaN).
+      {...(value !== undefined ? { value: value ?? Number.NaN } : {})}
       onChange={(next) => onChange?.(Number.isNaN(next) ? null : next)}
       {...(onBlur ? { onBlur } : {})}
       {...(name ? { name } : {})}

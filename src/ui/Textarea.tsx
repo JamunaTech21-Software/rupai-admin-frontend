@@ -1,9 +1,10 @@
-import { type Ref } from 'react';
+import { type Ref, useState } from 'react';
 import { TextArea, TextField } from 'react-aria-components';
 
 import { cx } from './cx';
 import { FieldErrorText, FieldHint, FieldLabel } from './Field';
 import { type FieldProps, fieldWrapper } from './fieldStyles';
+import { useUiText } from './uiText';
 
 export interface TextareaProps extends FieldProps {
   readonly value?: string | null | undefined;
@@ -33,11 +34,17 @@ export function Textarea({
   rows = 4,
   maxLength,
 }: TextareaProps) {
-  const length = (value ?? '').length;
+  const text = useUiText();
+  // Uncontrolled (no value given): count what is typed for the "n of max" counter.
+  const [typedLength, setTypedLength] = useState(0);
+  const length = value !== undefined ? (value ?? '').length : typedLength;
   return (
     <TextField
-      value={value ?? ''}
-      {...(onChange ? { onChange } : {})}
+      {...(value !== undefined ? { value: value ?? '' } : {})}
+      onChange={(typed) => {
+        setTypedLength(typed.length);
+        onChange?.(typed);
+      }}
       {...(onBlur ? { onBlur } : {})}
       {...(name ? { name } : {})}
       {...(maxLength ? { maxLength } : {})}
@@ -67,7 +74,7 @@ export function Textarea({
           {hint ? <FieldHint>{hint}</FieldHint> : <span />}
           {maxLength ? (
             <span className="shrink-0 text-sm text-fg-muted figures">
-              {length} of {maxLength}
+              {text.characterCount(String(length), String(maxLength))}
             </span>
           ) : null}
         </div>

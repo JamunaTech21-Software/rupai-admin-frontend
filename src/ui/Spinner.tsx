@@ -1,4 +1,5 @@
 import { cx } from './cx';
+import { useUiText } from './uiText';
 
 const SIZE = { sm: 'size-4', md: 'size-5', lg: 'size-8' } as const;
 
@@ -16,7 +17,8 @@ export interface SpinnerProps {
  * An indeterminate progress indicator. Under reduced motion it stops spinning and stays visible as a static
  * ring, so the wait is still communicated.
  */
-export function Spinner({ size = 'md', label = 'Loading', className }: SpinnerProps) {
+export function Spinner({ size = 'md', label, className }: SpinnerProps) {
+  const text = useUiText();
   const svg = (
     <svg
       viewBox="0 0 24 24"
@@ -32,7 +34,7 @@ export function Spinner({ size = 'md', label = 'Loading', className }: SpinnerPr
   return (
     <span role="status" className="inline-flex items-center">
       {svg}
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{label ?? text.loading}</span>
     </span>
   );
 }

@@ -11,6 +11,7 @@ import rupai from './eslint-rules/index.js';
 
 const MONEY =
   'Never floats for money or quantities (Spec P9 §2.1): use the decimal helpers in src/lib/money.';
+const I18N = 'User-facing text comes from t() (lib/i18n), never a literal: add a key to the locales.';
 const NO_FETCH = "Pages never fetch. Use the feature's api/ hooks.";
 
 /** Only the component library talks to the headless layer and the icon package (decision O-22). */
@@ -83,6 +84,25 @@ export default tseslint.config(
   {
     files: ['src/ui/**/*.{ts,tsx}'],
     rules: { 'no-restricted-imports': ['error', { patterns: [DECIMAL_IMPORTS] }] },
+  },
+  {
+    // No hard-coded user-facing strings in screens (Spec P5 §14): words come from t() (lib/i18n). Catches
+    // literal words in JSX text and in the props people read or hear. The money rule is repeated because
+    // this `no-restricted-syntax` replaces the base one for these files. The design-token reference page is a
+    // developer tool and stays English.
+    files: ['src/app/**/*.tsx', 'src/features/**/*.tsx'],
+    ignores: ['**/*.stories.tsx', '**/*.test.tsx', 'src/features/design-system/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        { selector: "CallExpression[callee.name='Number']", message: MONEY },
+        { selector: String.raw`JSXText[value=/[A-Za-zঀ-৿]{2,}/]`, message: I18N },
+        {
+          selector: String.raw`JSXAttribute[name.name=/^(label|title|placeholder|alt|description|hint|aria-label|confirmLabel|cancelLabel|consequence|emptyMessage)$/] > Literal[value=/[A-Za-zঀ-৿]{2,}/]`,
+          message: I18N,
+        },
+      ],
+    },
   },
   {
     // Route modules export `Component`/`loader` by name for React Router's lazy(), which is fine for HMR.

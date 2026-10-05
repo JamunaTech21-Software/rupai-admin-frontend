@@ -17,6 +17,7 @@ import { FieldErrorText, FieldHint, FieldLabel } from './Field';
 import { controlBox, type FieldProps, fieldWrapper, innerInput, listItem, popover } from './fieldStyles';
 import { Icon } from './Icon';
 import { Spinner } from './Spinner';
+import { useUiText } from './uiText';
 
 export interface ComboboxOption {
   readonly id: string;
@@ -83,9 +84,10 @@ export function AsyncCombobox({
   onChange,
   loadOptions,
   debounceMs = 300,
-  placeholder = 'Type to search…',
-  emptyMessage = 'No matches. Try another spelling or a code.',
+  placeholder,
+  emptyMessage,
 }: AsyncComboboxProps) {
+  const text = useUiText();
   const list = useAsyncList<ComboboxOption>({
     initialFilterText: value?.label ?? '',
     async load({ signal, cursor, filterText }) {
@@ -126,11 +128,11 @@ export function AsyncCombobox({
         <Icon name="search" size="sm" className="text-fg-muted" />
         <AriaInput
           ref={inputRef as Ref<HTMLInputElement> | undefined}
-          placeholder={placeholder}
+          placeholder={placeholder ?? text.typeToSearch}
           className={innerInput}
         />
-        {isSearching ? <Spinner size="sm" label="Searching" /> : null}
-        <AriaButton aria-label="Show results" className="flex items-center text-fg-muted">
+        {isSearching ? <Spinner size="sm" label={text.searching} /> : null}
+        <AriaButton aria-label={text.showResults} className="flex items-center text-fg-muted">
           <Icon name="chevronDown" size="sm" />
         </AriaButton>
       </Group>
@@ -140,7 +142,9 @@ export function AsyncCombobox({
         <ListBox
           className="outline-none"
           renderEmptyState={() => (
-            <p className="px-3 py-2 text-sm text-fg-muted">{isSearching ? 'Searching…' : emptyMessage}</p>
+            <p className="px-3 py-2 text-sm text-fg-muted">
+              {isSearching ? `${text.searching}…` : (emptyMessage ?? text.noMatches)}
+            </p>
           )}
         >
           <Collection items={list.items}>
@@ -167,7 +171,7 @@ export function AsyncCombobox({
             isLoading={list.loadingState === 'loadingMore'}
             className="flex justify-center py-2"
           >
-            <Spinner size="sm" label="Loading more" />
+            <Spinner size="sm" label={text.loadingMore} />
           </ListBoxLoadMoreItem>
         </ListBox>
       </Popover>

@@ -28,6 +28,7 @@ import { PresetButton, RangeMonthCalendar, Segments, SingleCalendar } from './Da
 import { FieldErrorText, FieldHint, FieldLabel } from './Field';
 import { controlBox, type FieldProps, fieldWrapper } from './fieldStyles';
 import { Icon } from './Icon';
+import { useUiText } from './uiText';
 
 /**
  * A date or time field has no single input: give the form a focus target that moves to the first segment, so
@@ -66,6 +67,7 @@ function boundsProps({ minValue, maxValue }: DateBounds) {
 }
 
 function DatePresets({ timeZone }: { readonly timeZone: string }) {
+  const text = useUiText();
   const state = useContext(DatePickerStateContext);
   return (
     <div className="mt-2 flex gap-1 border-t border-line pt-2">
@@ -78,7 +80,7 @@ function DatePresets({ timeZone }: { readonly timeZone: string }) {
             state?.close();
           }}
         >
-          {preset.label}
+          {text.datePresets[preset.id] ?? preset.label}
         </PresetButton>
       ))}
     </div>
@@ -112,6 +114,7 @@ export function DatePicker({
   timeZone = APP_TIMEZONE,
   ...bounds
 }: DatePickerProps) {
+  const text = useUiText();
   const focusRef = useSegmentFocus(inputRef);
   return (
     <AriaDatePicker
@@ -144,7 +147,7 @@ export function DatePicker({
       {hint ? <FieldHint>{hint}</FieldHint> : null}
       <FieldErrorText>{error}</FieldErrorText>
       <Popover className={datePopover}>
-        <Dialog className="outline-none" aria-label={`${label}: calendar`}>
+        <Dialog className="outline-none" aria-label={text.calendar(label)}>
           <SingleCalendar />
           <DatePresets timeZone={timeZone} />
         </Dialog>
@@ -154,6 +157,7 @@ export function DatePicker({
 }
 
 function RangePresets({ timeZone }: { readonly timeZone: string }) {
+  const text = useUiText();
   const state = useContext(DateRangePickerStateContext);
   return (
     <div className="flex flex-col gap-0.5 border-b border-line pb-2 sm:border-e sm:border-b-0 sm:pe-2 sm:pb-0">
@@ -168,7 +172,7 @@ function RangePresets({ timeZone }: { readonly timeZone: string }) {
             state?.close();
           }}
         >
-          {preset.label}
+          {text.datePresets[preset.id] ?? preset.label}
         </PresetButton>
       ))}
     </div>
@@ -198,6 +202,7 @@ export function DateRangePicker({
   timeZone = APP_TIMEZONE,
   ...bounds
 }: DateRangePickerProps) {
+  const text = useUiText();
   const focusRef = useSegmentFocus(inputRef);
   const start = toCalendarDate(value?.start);
   const end = toCalendarDate(value?.end);
@@ -240,7 +245,7 @@ export function DateRangePicker({
       {hint ? <FieldHint>{hint}</FieldHint> : null}
       <FieldErrorText>{error}</FieldErrorText>
       <Popover className={datePopover}>
-        <Dialog className="flex flex-col gap-2 outline-none sm:flex-row" aria-label={`${label}: calendar`}>
+        <Dialog className="flex flex-col gap-2 outline-none sm:flex-row" aria-label={text.calendar(label)}>
           <RangePresets timeZone={timeZone} />
           <RangeMonthCalendar />
         </Dialog>

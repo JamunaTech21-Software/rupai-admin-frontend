@@ -1,7 +1,10 @@
-import { type RequestHandler } from 'msw';
+import { http, HttpResponse, type RequestHandler } from 'msw';
 
 /**
- * Default request handlers for tests. F0.06 adds handlers that follow the API contract (Spec P4: envelopes,
- * error codes, pagination, auth). Tests override them per case with `server.use(...)`.
+ * Default request handlers for tests. Contract mocks (lib/mocking/contract.ts) are added per test with
+ * `server.use(...)`; this keeps only what every rendered app needs: the liveness check the environment
+ * banner reads.
  */
-export const handlers: RequestHandler[] = [];
+export const handlers: RequestHandler[] = [
+  http.get('*/health', () => HttpResponse.json({ status: 'ok' }, { headers: { 'X-Environment': 'test' } })),
+];

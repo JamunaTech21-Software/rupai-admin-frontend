@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { cx } from './cx';
 import { initialsOf } from './initials';
+import { useUiText } from './uiText';
 
 const SIZE = { sm: 'size-8 text-xs', md: 'size-10 text-sm', lg: 'size-14 text-lg' } as const;
 
@@ -18,10 +19,11 @@ export interface AvatarProps {
 
 /** A person's photo, falling back to their initials. */
 export function Avatar({ name, src, size = 'md', decorative = false, className }: AvatarProps) {
+  const text = useUiText();
   const [failed, setFailed] = useState(false);
   const showImage = Boolean(src) && !failed;
   // An avatar is never an unnamed image: with no name yet it is announced as such.
-  const accessibleName = name.trim() === '' ? 'Unnamed person' : name;
+  const accessibleName = name.trim() === '' ? text.unnamedPerson : name;
   const a11y = decorative ? { 'aria-hidden': true as const } : { role: 'img', 'aria-label': accessibleName };
 
   return (

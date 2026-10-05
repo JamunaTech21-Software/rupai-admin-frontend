@@ -2,6 +2,7 @@ import { Button as AriaButton } from 'react-aria-components';
 
 import { cx } from './cx';
 import { Icon } from './Icon';
+import { useUiText } from './uiText';
 
 export interface TagProps {
   /** The visible text, e.g. a division name in a filter bar. */
@@ -17,6 +18,7 @@ export interface TagProps {
  * With `onRemove`, its remove button is keyboard operable and named after the tag.
  */
 export function Tag({ label, onRemove, isDisabled = false, className }: TagProps) {
+  const text = useUiText();
   return (
     <span
       className={cx(
@@ -30,7 +32,7 @@ export function Tag({ label, onRemove, isDisabled = false, className }: TagProps
       {label}
       {onRemove ? (
         <AriaButton
-          aria-label={`Remove ${label}`}
+          aria-label={text.remove(label)}
           onPress={onRemove}
           isDisabled={isDisabled}
           className={cx(

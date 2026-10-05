@@ -120,13 +120,13 @@ export function CheckboxGroup({
   onBlur,
   className,
   options,
-  value = [],
+  value,
   onChange,
   orientation = 'vertical',
 }: CheckboxGroupProps) {
   return (
     <AriaCheckboxGroup
-      value={[...value]}
+      {...(value !== undefined ? { value: [...value] } : {})}
       {...(onChange ? { onChange } : {})}
       {...(onBlur ? { onBlur } : {})}
       {...(name ? { name } : {})}
@@ -182,7 +182,7 @@ export function RadioGroup({
 }: RadioGroupProps) {
   return (
     <AriaRadioGroup
-      value={value ?? null}
+      {...(value !== undefined ? { value } : {})}
       {...(onChange ? { onChange } : {})}
       {...(onBlur ? { onBlur } : {})}
       {...(name ? { name } : {})}

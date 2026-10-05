@@ -14,6 +14,7 @@ import {
 import { z } from 'zod';
 
 import { isBusinessDate, isTimeOfDay } from './dates';
+import { t } from './i18n';
 import { DECIMAL_KINDS, type DecimalKind, Dec, isDecimalString } from './money';
 
 /**
@@ -118,24 +119,23 @@ interface DecimalSchemaOptions {
 export function zDecimalString(kind: DecimalKind, options: DecimalSchemaOptions = {}) {
   const { intDigits } = DECIMAL_KINDS[kind];
   const scale = options.scale ?? DECIMAL_KINDS[kind].scale;
-  return z.string({ error: 'Enter an amount.' }).superRefine((value, ctx) => {
+  return z.string({ error: () => t('forms:enterAmount') }).superRefine((value, ctx) => {
     if (!isDecimalString(value)) {
-      ctx.addIssue({ code: 'custom', message: 'Enter a number such as 1250.50.' });
+      ctx.addIssue({ code: 'custom', message: t('forms:amountFormat') });
       return;
     }
     const [intPart = '', frac = ''] = value.replace('-', '').split('.');
-    if (frac.length > scale)
-      ctx.addIssue({ code: 'custom', message: `Use at most ${scale} decimal places.` });
+    if (frac.length > scale) ctx.addIssue({ code: 'custom', message: t('forms:maxPlaces', { scale }) });
     if (intPart.replace(/^0+(?=\d)/, '').length > intDigits) {
-      ctx.addIssue({ code: 'custom', message: 'This number is too large.' });
+      ctx.addIssue({ code: 'custom', message: t('forms:tooLarge') });
     }
     const d = new Dec(value);
-    if (options.positive && !d.gt(0)) ctx.addIssue({ code: 'custom', message: 'Must be greater than 0.' });
+    if (options.positive && !d.gt(0)) ctx.addIssue({ code: 'custom', message: t('forms:positive') });
     if (options.min !== undefined && d.lt(options.min)) {
-      ctx.addIssue({ code: 'custom', message: `Must be at least ${options.min}.` });
+      ctx.addIssue({ code: 'custom', message: t('forms:atLeast', { min: options.min }) });
     }
     if (options.max !== undefined && d.gt(options.max)) {
-      ctx.addIssue({ code: 'custom', message: `Must be at most ${options.max}.` });
+      ctx.addIssue({ code: 'custom', message: t('forms:atMost', { max: options.max }) });
     }
   });
 }
@@ -149,8 +149,10 @@ export const zQuantity = (options: DecimalSchemaOptions = {}) => zDecimalString(
 
 /** A business date `YYYY-MM-DD`. */
 export const zBusinessDate = () =>
-  z.string({ error: 'Choose a date.' }).refine(isBusinessDate, { message: 'Enter a valid date.' });
+  z
+    .string({ error: () => t('forms:chooseDate') })
+    .refine(isBusinessDate, { error: () => t('forms:validDate') });
 
 /** A time of day `HH:mm`. */
 export const zTimeOfDay = () =>
-  z.string({ error: 'Enter a time.' }).refine(isTimeOfDay, { message: 'Enter a valid time.' });
+  z.string({ error: () => t('forms:enterTime') }).refine(isTimeOfDay, { error: () => t('forms:validTime') });
