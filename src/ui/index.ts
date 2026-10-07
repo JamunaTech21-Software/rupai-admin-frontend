@@ -16,6 +16,7 @@ export { Button, type ButtonProps } from './Button';
 export { type ButtonSize, type ButtonVariant } from './buttonStyles';
 export { IconButton, type IconButtonProps } from './IconButton';
 export { Link, type LinkProps } from './Link';
+export { ButtonLink, type ButtonLinkProps } from './ButtonLink';
 export { Badge, type BadgeProps, type BadgeTone } from './Badge';
 export { Tag, type TagProps } from './Tag';
 export { Avatar, type AvatarProps } from './Avatar';

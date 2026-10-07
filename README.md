@@ -256,7 +256,7 @@ See _Forms / Form example_ in Storybook for a complete form with line items and 
 - **Languages**: English and বাংলা (`lib/i18n/locales`, same keys enforced by the type checker). No literal words
   in screens — lint fails on them; use `t()`. Format numbers, money, quantities and dates with `useFormat()`
   (Bangla uses Bengali digits and lakh grouping). The switch is in the top bar and on the sign-in page.
-- **Without the backend**: `VITE_MOCK_API=auth,jobs npm run dev` and sign in as `manager` (everything), `viewer`
+- **Without the backend**: `VITE_MOCK_API=auth,jobs,admin npm run dev` and sign in as `manager` (everything), `viewer`
   (no permissions) or `trainee` (must change password); password `Demo-Password-1`.
 
 ## Configuration

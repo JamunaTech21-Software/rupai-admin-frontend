@@ -1,5 +1,11 @@
 import { type RouteObject } from 'react-router';
 
+import {
+  adminRoleCreateRoutes,
+  adminRoleRoutes,
+  adminUserCreateRoutes,
+  adminUserRoutes,
+} from '@/features/admin';
 import { changePasswordRoute, publicAuthRoutes } from '@/features/auth';
 import { designSystemRoutes } from '@/features/design-system';
 import { homeRoutes } from '@/features/home';
@@ -56,12 +62,14 @@ export const routes: RouteObject[] = [
               ...designSystemRoutes,
               {
                 element: <RequirePermission permission="user.view" />,
-                children: [{ path: 'admin/users', element: <ComingSoon screen="users" phase="P1.01" /> }],
+                children: adminUserRoutes,
               },
+              { element: <RequirePermission permission="user.create" />, children: adminUserCreateRoutes },
               {
                 element: <RequirePermission permission="role.view" />,
-                children: [{ path: 'admin/roles', element: <ComingSoon screen="roles" phase="P1.01" /> }],
+                children: adminRoleRoutes,
               },
+              { element: <RequirePermission permission="role.create" />, children: adminRoleCreateRoutes },
               {
                 element: <RequirePermission permission="audit.view" />,
                 children: [{ path: 'admin/audit', element: <ComingSoon screen="audit" phase="P1.05" /> }],

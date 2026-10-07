@@ -231,8 +231,9 @@ export function DataTable<TRow>({
 
   const header = (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex min-w-0 flex-1 flex-wrap items-end gap-3">{toolbar}</div>
-      <div className="flex items-center gap-2">
+      {/* On a phone the filters take the whole row; sort and columns wrap below them. */}
+      <div className="flex min-w-0 basis-full flex-wrap items-end gap-3 sm:flex-1 sm:basis-0">{toolbar}</div>
+      <div className="flex items-end gap-2">
         {!isWide && sortable.length > 0 && onSortChange ? (
           <Select
             label={text.sortBy}
