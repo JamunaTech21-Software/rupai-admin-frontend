@@ -2,14 +2,35 @@ import { useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router';
 import { z } from 'zod';
 
-import { describeError } from '@/lib/errors';
+import { describeError, isApiError } from '@/lib/errors';
 import { useAuth } from '@/lib/auth';
 import { useFormField, useZodForm } from '@/lib/forms';
-import { useTranslation } from '@/lib/i18n';
+import { type TFunction, useTranslation } from '@/lib/i18n';
 import { Alert, Button, Input, Link } from '@/ui';
 
 import { AuthForm } from '../components/AuthForm';
 import { safeReturnTo } from '../returnTo';
+
+/**
+ * What to tell the user when sign-in is refused. Locked, disabled and rate-limited answers get their own words
+ * (with the wait in minutes or seconds); anything else uses the server's message.
+ */
+function signInFailure(error: unknown, t: TFunction<'auth'>): string {
+  if (isApiError(error)) {
+    if (error.code === 'ACCOUNT_LOCKED') {
+      const detail = error.details[0];
+      if (detail?.code === 'ACCOUNT_DISABLED') return t('accountDisabled');
+      const seconds = detail?.context?.retry_after_seconds;
+      return typeof seconds === 'number' && seconds > 0
+        ? t('accountLocked', { count: Math.ceil(seconds / 60) })
+        : t('accountLockedNow');
+    }
+    if (error.code === 'RATE_LIMITED') {
+      return error.retryAfter ? t('rateLimited', { count: error.retryAfter }) : t('rateLimitedNow');
+    }
+  }
+  return describeError(error).message;
+}
 
 /** Sign in (P1.02 /auth/login). Afterwards the user goes back to the page they asked for (?returnTo=). */
 export function LoginPage() {
@@ -45,7 +66,7 @@ export function LoginPage() {
             await auth.signIn(values);
             void navigate(returnTo, { replace: true });
           } catch (error) {
-            setFailure(describeError(error).message);
+            setFailure(signInFailure(error, t));
           }
         })();
       }}

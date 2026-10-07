@@ -85,10 +85,12 @@ export function TopBarActions() {
         name={me.user.username}
         {...(roles ? { detail: roles } : {})}
         items={[
+          { id: 'account', label: t('yourAccount'), icon: 'user' },
           { id: 'change-password', label: t('changePassword'), icon: 'settings' },
           { id: 'sign-out', label: t('signOut'), icon: 'logout', isDanger: true },
         ]}
         onAction={(id) => {
+          if (id === 'account') void navigate('/account');
           if (id === 'change-password') void navigate('/change-password');
           if (id === 'sign-out') {
             void auth.signOut().finally(() => {

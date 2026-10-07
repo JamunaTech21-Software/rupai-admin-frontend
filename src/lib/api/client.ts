@@ -1,7 +1,13 @@
 import { config } from '../env';
 
 import { ClientContractError, NetworkError, ResponseShapeError, toApiError, type ApiError } from './errors';
-import { endSession, getAccessToken, recordEnvironment, setAccessToken } from './session';
+import {
+  endSession,
+  getAccessToken,
+  recordEnvironment,
+  requirePasswordChange,
+  setAccessToken,
+} from './session';
 
 /**
  * The one API client (Spec P5 §3.4, P4 §2–§5). Features call it from their api/ hooks; pages never do.
@@ -219,7 +225,14 @@ export function createApiClient(options: ApiClientOptions) {
 
     if (!response.ok) {
       const retryAfter = Number.parseInt(response.headers.get('Retry-After') ?? '', 10);
-      throw toApiError(response.status, body, requestId, Number.isNaN(retryAfter) ? null : retryAfter);
+      const error = toApiError(
+        response.status,
+        body,
+        requestId,
+        Number.isNaN(retryAfter) ? null : retryAfter,
+      );
+      if (error.code === 'PASSWORD_CHANGE_REQUIRED') requirePasswordChange();
+      throw error;
     }
 
     const envelope = (body ?? {}) as {

@@ -33,6 +33,8 @@ export interface AuthContextValue {
   readonly state: AuthState;
   readonly signIn: (credentials: { username: string; password: string }) => Promise<Me>;
   readonly signOut: () => Promise<void>;
+  /** Ends every session of this user (all devices), this one included. */
+  readonly signOutEverywhere: () => Promise<void>;
   /** Re-reads /auth/me (after a password change, a role change). */
   readonly reload: () => Promise<void>;
 }

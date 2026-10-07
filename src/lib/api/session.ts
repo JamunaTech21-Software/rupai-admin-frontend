@@ -40,6 +40,23 @@ export function onSessionEnd(listener: Listener): () => void {
   };
 }
 
+const passwordListeners = new Set<() => void>();
+
+/**
+ * The server answered 403 PASSWORD_CHANGE_REQUIRED (e.g. an administrator reset the password during this
+ * session). The auth provider listens and sends the user to the change-password screen.
+ */
+export function requirePasswordChange(): void {
+  for (const listener of passwordListeners) listener();
+}
+
+export function onPasswordChangeRequired(listener: () => void): () => void {
+  passwordListeners.add(listener);
+  return () => {
+    passwordListeners.delete(listener);
+  };
+}
+
 /** The environment the API last reported (X-Environment): `development`, `staging`; null in production. */
 let environment: string | null = null;
 export function lastEnvironment(): string | null {

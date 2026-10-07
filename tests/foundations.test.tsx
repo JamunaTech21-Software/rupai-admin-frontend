@@ -91,6 +91,7 @@ function withPermissions(permissions: string[], node: React.ReactNode) {
     },
     signIn: () => Promise.reject(new Error('unused')),
     signOut: () => Promise.resolve(),
+    signOutEverywhere: () => Promise.resolve(),
     reload: () => Promise.resolve(),
   };
   return <AuthContext.Provider value={value}>{node}</AuthContext.Provider>;
