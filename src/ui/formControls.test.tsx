@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -437,18 +437,24 @@ describe('AsyncCombobox', () => {
       }),
     );
     const onChange = vi.fn();
-    // A realistic pause: keystrokes in a test come far faster than 400 ms apart, even on a busy machine.
+    // A controlled clock: typing takes no time at all, then the pause is exactly the debounce. Real timers made
+    // this depend on how busy the machine was.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
     render(<AsyncCombobox label="Worker" loadOptions={loadOptions} debounceMs={400} onChange={onChange} />);
 
-    await userEvent.type(screen.getByRole('combobox', { name: /Worker/ }), 'rin');
-    const option = await screen.findByRole('option', { name: /Rina Begum/ }, { timeout: 5000 });
+    await user.type(screen.getByRole('combobox', { name: /Worker/ }), 'rin');
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+    });
+    const option = await screen.findByRole('option', { name: /Rina Begum/ });
     const queries = loadOptions.mock.calls.map(([args]) => args.query);
     expect(queries).not.toContain('r');
     expect(queries).not.toContain('ri');
     expect(queries.at(-1)).toBe('rin');
     expect(screen.queryByRole('option', { name: /Rahim/ })).not.toBeInTheDocument();
 
-    await userEvent.click(option);
+    await user.click(option);
     expect(onChange).toHaveBeenLastCalledWith(workers[1]);
   });
 

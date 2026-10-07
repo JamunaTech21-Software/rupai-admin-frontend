@@ -24,6 +24,7 @@
   },
   "include": [
     "vite.config.ts",
+    "middleware.ts",
     "playwright.config.ts",
     "playwright.storybook.config.ts",
     ".storybook/main.ts",

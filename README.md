@@ -71,21 +71,33 @@ page shows the current setting. To give a feature mocks: write `src/features/<na
 
 ## Staging (Vercel)
 
-The web app is deployed to **Vercel** from GitHub; the backend runs on the staging machine behind a Cloudflare
-tunnel (`../backend/docs/STAGING.md`). `vercel.json` rewrites `/api/*`, `/health*` and `/docs*` to the staging API
-and sends every other path to `index.html` (SPA fallback), so the browser sees one origin and the sign-in cookie
-works.
+The web app is deployed to **Vercel** from GitHub; the staging backend runs on the staging machine behind a
+temporary tunnel (`../backend/docs/STAGING.md`). **`middleware.ts`** (Vercel Routing Middleware) forwards
+`/api/*`, `/health*` and `/docs*` server-side to the backend named by the Vercel environment variable
+**`BACKEND_URL`**; `vercel.json` sends every other path to `index.html` (deep links work). No backend address is
+written in this repository (P0.08b, RUP-408).
+
+**Never point the browser at the backend directly** (`VITE_API_BASE_URL` stays `/api/v1`): the refresh cookie
+(`SameSite=Strict`, path `/api/v1/auth`) is only sent to the Vercel domain, so calling the tunnel from the browser
+would drop the session after 15 minutes and cause CORS errors.
+
+**First deployment**
 
 1. **Import the repository in Vercel** (Add New → Project). Vercel detects Vite; `vercel.json` sets the install
    (`npm ci`), build (`npm run build`) and output (`dist`). Do **not** set `VITE_API_BASE_URL`.
-2. Every push to the main branch redeploys; pull requests get preview URLs that reach the same staging API.
-3. **Send the Vercel URL to the backend developer**: it becomes `APP_PUBLIC_URL` (password-reset links).
-4. **The staging API address is temporary** (a Cloudflare quick tunnel) until a domain is added. When the backend
-   developer posts a new address on RUP-403, replace the hostname in all five rewrite destinations in
-   `vercel.json` and push.
+2. Set `BACKEND_URL` as below, then deploy. Every push to the main branch redeploys; pull requests get preview URLs.
+3. **Send the Vercel URL to the backend owner**: it becomes `APP_PUBLIC_URL` on the backend (password-reset links).
 
-Check after a deploy: `https://<project>.vercel.app/health/ready` is `ready`, the staging banner shows, and you can
-sign in as `manager` or `viewer` (password from the backend developer).
+**When the backend address changes (backend owner, no code change)**
+
+1. Start the staging backend; `deploy.sh` prints the new `https://…` address.
+2. Vercel → Project → **Settings → Environment Variables** → `BACKEND_URL` = that address (Production, and Preview
+   if wanted). It must be https; a trailing slash is ignored.
+3. **Deployments → latest → Redeploy** (Vercel only picks up changed variables on a new deployment).
+4. Open `https://<project>.vercel.app/health/ready` to confirm, then `/login`.
+
+If `BACKEND_URL` is missing or not an https URL, `/api`, `/health` and `/docs` answer **503
+`BACKEND_NOT_CONFIGURED`** with a message saying so; the app's pages still load and show that message.
 
 ## Scripts
 

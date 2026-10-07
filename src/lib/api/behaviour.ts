@@ -37,6 +37,8 @@ export function errorBehaviour(error: unknown): ErrorBehaviour {
   if (!(error instanceof ApiError)) return 'error-state';
   if (error.code === 'VERSION_CONFLICT') return 'conflict';
   if (error.code === 'PASSWORD_CHANGE_REQUIRED') return 'change-password';
+  // A deployment without BACKEND_URL (Vercel middleware): retrying cannot help; show its message.
+  if (error.code === 'BACKEND_NOT_CONFIGURED') return 'error-state';
   if (error.code === 'IDEMPOTENCY_IN_PROGRESS' || error.status === 429 || error.status === 503)
     return 'wait-retry';
   if (error.status === 401) return 'sign-in';
@@ -55,6 +57,7 @@ export function describeError(error: unknown): {
   readonly requestId: string | null;
 } {
   if (error instanceof ApiError) {
+    if (error.code === 'BACKEND_NOT_CONFIGURED') return { message: error.message, requestId: null };
     if (error.status >= 500) {
       return {
         message: t('errors:serverError'),

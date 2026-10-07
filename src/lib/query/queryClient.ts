@@ -11,6 +11,8 @@ import { CACHE_POLICIES } from './cachePolicy';
 export function shouldRetryQuery(failureCount: number, error: unknown): boolean {
   if (failureCount >= 2) return false;
   if (error instanceof NetworkError) return true;
+  // A deployment without BACKEND_URL answers 503 BACKEND_NOT_CONFIGURED: only a redeploy fixes that.
+  if (error instanceof ApiError && error.code === 'BACKEND_NOT_CONFIGURED') return false;
   if (error instanceof ApiError) return error.status >= 500 || error.status === 429;
   return !(error instanceof ClientContractError);
 }
