@@ -38,8 +38,8 @@ function EstateContext() {
   return (
     <Tooltip content={t('estateSoon')}>
       <Button variant="secondary" size="sm" aria-label={`${t('estate')}: ${label}`}>
-        <Icon name="mapPin" size="sm" className="text-primary" />
-        <span className="hidden md:inline">{label}</span>
+        <Icon name="mapPin" size="sm" className="shrink-0 text-primary" />
+        <span className="hidden truncate md:inline">{label}</span>
       </Button>
     </Tooltip>
   );
