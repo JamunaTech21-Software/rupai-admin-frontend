@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { z } from 'zod';
 
 import { describeError, isApiError } from '@/lib/errors';
@@ -10,12 +10,23 @@ import { Alert, Button, Input, Link, toast } from '@/ui';
 import { useResetPassword } from '../api/password';
 import { AuthForm } from '../components/AuthForm';
 
-/** Set a new password from the emailed link (`/reset-password?token=…`). */
+/**
+ * Set a new password from the emailed link. The token comes in the URL fragment (`/reset-password#token=…`), so it
+ * is never sent to a server or kept in logs; it is read once and removed from the address bar. An older
+ * `?token=` link still works.
+ */
 export function ResetPasswordPage() {
   const { t } = useTranslation('auth');
   const [params] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
-  const token = params.get('token') ?? '';
+  const [token] = useState(
+    () => new URLSearchParams(location.hash.replace(/^#/, '')).get('token') ?? params.get('token') ?? '',
+  );
+  useEffect(() => {
+    if (location.hash !== '' || params.has('token'))
+      void navigate({ hash: '', search: '' }, { replace: true });
+  }, [location.hash, params, navigate]);
   const reset = useResetPassword();
   const [failure, setFailure] = useState<string | null>(null);
 

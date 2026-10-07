@@ -4,10 +4,12 @@ import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react
 import {
   api,
   type ApiClient,
+  onPasswordChangeRequired,
   onSessionEnd,
   setAccessToken,
   signIn as apiSignIn,
   signOut as apiSignOut,
+  signOutEverywhere as apiSignOutEverywhere,
 } from '../api';
 
 import { AuthContext, type AuthContextValue, type AuthState, MeSchema } from './me';
@@ -69,6 +71,19 @@ export function AuthProvider({ children, client = api, loadLookups }: AuthProvid
     [queryClient],
   );
 
+  // A 403 PASSWORD_CHANGE_REQUIRED mid-session: mark it, and the route guard sends the user to change it.
+  useEffect(
+    () =>
+      onPasswordChangeRequired(() => {
+        setState((previous) =>
+          previous.status === 'signed-in' && !previous.me.must_change_password
+            ? { status: 'signed-in', me: { ...previous.me, must_change_password: true } }
+            : previous,
+        );
+      }),
+    [],
+  );
+
   const value = useMemo<AuthContextValue>(
     () => ({
       state,
@@ -78,6 +93,11 @@ export function AuthProvider({ children, client = api, loadLookups }: AuthProvid
       },
       signOut: async () => {
         await apiSignOut(client);
+        queryClient.clear();
+        setAccessToken(null);
+      },
+      signOutEverywhere: async () => {
+        await apiSignOutEverywhere(client);
         queryClient.clear();
         setAccessToken(null);
       },

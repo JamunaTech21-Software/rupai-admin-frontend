@@ -66,6 +66,7 @@ export function useLanguage(): Language {
 /** Translate outside React (lib messages, schemas). Prefer useTranslation() in components. */
 export const t = i18n.t.bind(i18n);
 
+export { type TFunction } from 'i18next';
 export { useTranslation } from 'react-i18next';
 export { type Formatters, makeFormatters, toLocalDigits, useFormat } from './format';
 export { en as EN_STRINGS } from './locales/en';

@@ -18,4 +18,7 @@ export const changePasswordRoute: RouteObject = {
   lazy: () => import('./pages/ChangePasswordPage'),
 };
 
+/** Your account: profile and signed-in devices. Needs a session, no permission; in the Application layout. */
+export const accountRoutes: RouteObject[] = [{ path: 'account', lazy: () => import('./pages/AccountPage') }];
+
 export { loginPathFor, safeReturnTo } from './returnTo';

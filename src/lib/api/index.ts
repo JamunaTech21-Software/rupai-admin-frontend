@@ -29,10 +29,12 @@ export {
   endSession,
   getAccessToken,
   lastEnvironment,
+  onPasswordChangeRequired,
   onSessionEnd,
+  requirePasswordChange,
   type SessionEndReason,
   setAccessToken,
 } from './session';
 export { newIdempotencyKey, useIdempotencyKey } from './idempotency';
-export { signIn, signOut, TokenSchema, type TokenResponse } from './auth';
+export { signIn, signOut, signOutEverywhere, TokenSchema, type TokenResponse } from './auth';
 export { describeError, type ErrorBehaviour, errorBehaviour } from './behaviour';

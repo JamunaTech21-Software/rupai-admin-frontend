@@ -25,6 +25,15 @@ export async function signIn(
   return data;
 }
 
+/** Ends every session of this user, this one included (POST /auth/logout-all). */
+export async function signOutEverywhere(client: ApiClient = api): Promise<void> {
+  try {
+    await client.post('/auth/logout-all');
+  } finally {
+    endSession('signed-out');
+  }
+}
+
 /** Signs out this session. The server clears the cookie; the token is forgotten even if the call fails. */
 export async function signOut(client: ApiClient = api): Promise<void> {
   try {

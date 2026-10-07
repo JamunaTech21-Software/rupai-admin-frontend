@@ -223,7 +223,41 @@ export const mockSession = {
   refreshCalls: 0,
   /** Accounts that changed their temporary password in this session. */
   passwordChanged: new Set<string>(),
+  /** The signed-in user's sessions on other devices (GET /auth/sessions lists them after the current one). */
+  otherSessions: seedOtherSessions(),
 };
+
+interface MockSessionRow {
+  id: string;
+  created_at: string;
+  last_used_at: string;
+  expires_at: string;
+  ip_address: string | null;
+  user_agent: string | null;
+}
+
+/** Two other devices: a phone and a laptop. */
+function seedOtherSessions(): MockSessionRow[] {
+  return [
+    {
+      id: 'ses_phone',
+      created_at: '2026-10-01T03:00:00.000Z',
+      last_used_at: '2026-10-06T09:30:00.000Z',
+      expires_at: '2026-10-31T03:00:00.000Z',
+      ip_address: '103.4.145.10',
+      user_agent: 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/129.0 Mobile Safari/537.36',
+    },
+    {
+      id: 'ses_laptop',
+      created_at: '2026-09-28T05:00:00.000Z',
+      last_used_at: '2026-10-05T11:00:00.000Z',
+      expires_at: '2026-10-28T05:00:00.000Z',
+      ip_address: null,
+      user_agent:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 Version/17.5 Safari/605.1.15',
+    },
+  ];
+}
 
 /** Back to "nobody signed in" (between tests, or a fresh mock session). */
 export function resetMockSession(): void {
@@ -231,6 +265,7 @@ export function resetMockSession(): void {
   mockSession.signedIn = null;
   mockSession.refreshCalls = 0;
   mockSession.passwordChanged.clear();
+  mockSession.otherSessions = seedOtherSessions();
 }
 
 export const MOCK_USERS = [
@@ -290,6 +325,21 @@ export function authMocks(base = '/api/v1'): RequestHandler[] {
         username?: string;
         password?: string;
       } | null;
+      // Two extra accounts for the refusal paths: locked after failed attempts, and disabled.
+      if (body?.password === MOCK_PASSWORD && body.username === 'locked') {
+        return apiError(401, 'ACCOUNT_LOCKED', 'Too many failed sign-ins. The account is locked for now.', [
+          {
+            code: 'ACCOUNT_LOCKED',
+            message: 'Try again in 10 minutes, or ask an administrator.',
+            context: { retry_after_seconds: 540 },
+          },
+        ]);
+      }
+      if (body?.password === MOCK_PASSWORD && body.username === 'disabled') {
+        return apiError(401, 'ACCOUNT_LOCKED', 'This account is disabled.', [
+          { code: 'ACCOUNT_DISABLED', message: 'Ask an administrator to re-enable it.' },
+        ]);
+      }
       const user = MOCK_USERS.find((u) => u.username === body?.username);
       if (!user || body?.password !== MOCK_PASSWORD) {
         return apiError(401, 'INVALID_CREDENTIALS', 'The username or password is not correct.');
@@ -305,6 +355,41 @@ export function authMocks(base = '/api/v1'): RequestHandler[] {
     http.post(`${base}/auth/logout`, () => {
       mockSession.tokens.clear();
       mockSession.signedIn = null;
+      return noContent();
+    }),
+    http.post(`${base}/auth/logout-all`, ({ request }) => {
+      const denied = requireAuth(request);
+      if (denied) return denied;
+      mockSession.tokens.clear();
+      mockSession.signedIn = null;
+      mockSession.otherSessions = [];
+      return noContent();
+    }),
+    http.get(`${base}/auth/sessions`, ({ request }) => {
+      const denied = requireAuth(request);
+      if (denied) return denied;
+      const now = new Date().toISOString();
+      const current = {
+        id: `ses_${mockSession.signedIn?.username ?? 'me'}`,
+        created_at: now,
+        last_used_at: now,
+        expires_at: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+        ip_address: '127.0.0.1',
+        user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/129.0 Safari/537.36',
+        current: true,
+      };
+      return page(request, [
+        current,
+        ...mockSession.otherSessions.map((row) => ({ ...row, current: false })),
+      ]);
+    }),
+    http.delete(`${base}/auth/sessions/:id`, ({ request, params }) => {
+      const denied = requireAuth(request);
+      if (denied) return denied;
+      const before = mockSession.otherSessions.length;
+      mockSession.otherSessions = mockSession.otherSessions.filter((row) => row.id !== params.id);
+      if (mockSession.otherSessions.length === before)
+        return apiError(404, 'NOT_FOUND', 'Session not found.');
       return noContent();
     }),
     // Always 202 with the same message, whether or not the address exists (no account enumeration).

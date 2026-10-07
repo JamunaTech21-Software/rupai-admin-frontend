@@ -6,7 +6,7 @@ import {
   adminUserCreateRoutes,
   adminUserRoutes,
 } from '@/features/admin';
-import { changePasswordRoute, publicAuthRoutes } from '@/features/auth';
+import { accountRoutes, changePasswordRoute, publicAuthRoutes } from '@/features/auth';
 import { designSystemRoutes } from '@/features/design-system';
 import { homeRoutes } from '@/features/home';
 
@@ -59,6 +59,7 @@ export const routes: RouteObject[] = [
             Component: ApplicationLayout,
             children: [
               ...homeRoutes,
+              ...accountRoutes,
               ...designSystemRoutes,
               {
                 element: <RequirePermission permission="user.view" />,
