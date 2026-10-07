@@ -23,6 +23,7 @@ import { usePermissionCatalogue } from '../api/roles';
 import { type User } from '../api/schemas';
 import { useDeleteUser, useSetUserStatus, useUser, useUserPermissions } from '../api/users';
 import { PermissionMatrix } from '../components/PermissionMatrix';
+import { ScopesTab } from '../components/ScopesTab';
 import { StatusBadge } from '../components/StatusBadge';
 
 // Opened on demand; the role picker carries the date picker, which this page does not otherwise need.
@@ -153,7 +154,7 @@ function PermissionsTab({ user }: { readonly user: User }) {
   );
 }
 
-/** Admin → Users → one user: profile, roles (with the role picker) and effective permissions. */
+/** Admin → Users → one user: profile, roles (with the role picker), effective permissions and data scope. */
 export function UserDetailPage() {
   const { t } = useTranslation('admin');
   const { id = '' } = useParams();
@@ -295,6 +296,11 @@ function UserDetail({
             ),
           },
           { id: 'permissions', label: t('user.tabs.permissions'), content: <PermissionsTab user={user} /> },
+          {
+            id: 'scopes',
+            label: t('user.tabs.scopes'),
+            content: <ScopesTab user={user} canEdit={canEdit} onRefused={setRefusal} />,
+          },
         ]}
       />
 

@@ -86,3 +86,40 @@ export type Permission = z.infer<typeof PermissionSchema>;
 
 /** Role codes as the backend accepts them: upper case, digits and underscores, 2–20 characters. */
 export const ROLE_CODE = /^[A-Z][A-Z0-9_]{1,19}$/;
+
+/** Data-scope grants (P1.03). `self` is implicit for everyone, so it is listed by the API but never granted. */
+export const SCOPE_TYPES = [
+  'all_estates',
+  'estate',
+  'division',
+  'section',
+  'department',
+  'facility',
+  'self',
+] as const;
+export type ScopeType = (typeof SCOPE_TYPES)[number];
+export const GRANTABLE_SCOPE_TYPES = [
+  'all_estates',
+  'estate',
+  'division',
+  'section',
+  'department',
+  'facility',
+] as const satisfies readonly ScopeType[];
+export type GrantableScopeType = (typeof GRANTABLE_SCOPE_TYPES)[number];
+
+export const ScopeGrantSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  scope_type: z.enum(SCOPE_TYPES),
+  scope_id: z.string().nullable(),
+  granted_at: z.string(),
+  granted_by: z.string(),
+  expires_at: z.string().nullable(),
+  /** false once expires_at has passed: the grant is kept but confers nothing. */
+  active: z.boolean(),
+  version: z.number(),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
+});
+export type ScopeGrant = z.infer<typeof ScopeGrantSchema>;

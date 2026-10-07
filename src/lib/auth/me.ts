@@ -13,11 +13,15 @@ export const MeSchema = z.object({
     roles: z._default(z.array(z.looseObject({ id: z.string(), code: z.string(), name: z.string() })), []),
   }),
   permissions: z.array(z.string()),
+  /** The effective data scope (P1.03): the union of the user's live grants. Ids are strings. */
   scope: z.looseObject({
     all_estates: z.optional(z.boolean()),
-    estates: z.optional(z.array(z.unknown())),
-    divisions: z.optional(z.array(z.unknown())),
-    sections: z.optional(z.array(z.unknown())),
+    estates: z.optional(z.array(z.string())),
+    divisions: z.optional(z.array(z.string())),
+    sections: z.optional(z.array(z.string())),
+    departments: z.optional(z.array(z.string())),
+    facilities: z.optional(z.array(z.string())),
+    self_employment_profile_id: z.optional(z.nullable(z.string())),
   }),
   session_id: z.nullable(z.string()),
   must_change_password: z.boolean(),

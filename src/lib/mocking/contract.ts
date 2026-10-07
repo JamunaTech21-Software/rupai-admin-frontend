@@ -446,7 +446,16 @@ export function authMocks(base = '/api/v1'): RequestHandler[] {
               : [],
         },
         permissions: [...user.permissions],
-        scope: { all_estates: user.id === 'usr_manager', estates: [] },
+        // manager is unrestricted; viewer is scoped to two estates (the top-bar selector); trainee to none.
+        scope: {
+          all_estates: user.id === 'usr_manager',
+          estates: user.id === 'usr_viewer' ? ['3', '7'] : [],
+          divisions: [],
+          sections: [],
+          departments: [],
+          facilities: [],
+          self_employment_profile_id: null,
+        },
         session_id: `ses_${user.username}`,
         must_change_password: mustChange(user.id),
       });
