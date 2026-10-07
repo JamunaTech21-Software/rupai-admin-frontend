@@ -1,9 +1,9 @@
 import { useNavigate } from 'react-router';
 
 import { RunningJobs } from '@/features/system';
-import { useAuth, useMe } from '@/lib/auth';
+import { useAuth, useEstateContext, useMe } from '@/lib/auth';
 import { currentLanguage, setLanguage, useTranslation } from '@/lib/i18n';
-import { Button, Icon, IconButton, Tooltip, UserMenu } from '@/ui';
+import { Button, ContextSwitcher, IconButton, UserMenu } from '@/ui';
 
 /** Switches between English and Bangla; the button is labelled in the language it switches to. */
 export function LanguageSwitch() {
@@ -24,24 +24,39 @@ export function LanguageSwitch() {
   );
 }
 
+/** The estate selector's value for everything in scope. */
+const ALL = 'all';
+
 /**
- * The estate context (Spec P5 §3.3). Choosing among several estates arrives with estate set-up (P1.03 front
- * end); until then it shows the data scope the user has, from /auth/me.
+ * The estate selector (Spec P5 §3.3, §9.3), from the data scope in /auth/me. A user scoped to several estates
+ * narrows the screens to one of them; all_estates is unrestricted. Estate names, and picking among every
+ * estate for an unrestricted user, arrive with estate set-up (P1.07); until then estates show by number.
  */
-function EstateContext() {
+function EstateSelector() {
   const { t } = useTranslation('common');
-  const me = useMe();
-  if (!me) return null;
-  const label = me.scope.all_estates
+  const estate = useEstateContext();
+  if (!estate) return null;
+  const all = estate.allEstates
     ? t('allEstates')
-    : t('estateScoped', { count: me.scope.estates?.length ?? 0 });
+    : estate.estates.length === 0
+      ? t('noEstates')
+      : t('allMyEstates');
+  const options = [
+    { id: ALL, label: all },
+    ...(estate.allEstates ? [] : estate.estates.map((id) => ({ id, label: t('estateNumber', { id }) }))),
+  ];
+  // A single estate is the whole scope: show it, not a choice between it and "all".
+  const shown = !estate.allEstates && estate.estates.length === 1 ? options.slice(1) : options;
   return (
-    <Tooltip content={t('estateSoon')}>
-      <Button variant="secondary" size="sm" aria-label={`${t('estate')}: ${label}`}>
-        <Icon name="mapPin" size="sm" className="shrink-0 text-primary" />
-        <span className="hidden truncate md:inline">{label}</span>
-      </Button>
-    </Tooltip>
+    <ContextSwitcher
+      label={t('estate')}
+      icon="mapPin"
+      options={shown}
+      value={estate.selected ?? shown[0]?.id ?? ALL}
+      onChange={(id) => {
+        estate.select(id === ALL ? null : id);
+      }}
+    />
   );
 }
 
@@ -77,7 +92,7 @@ export function TopBarActions() {
   return (
     <>
       <RunningJobs />
-      <EstateContext />
+      <EstateSelector />
       <Approvals />
       <IconButton icon="bell" variant="ghost" label={t('notifications')} />
       <LanguageSwitch />

@@ -105,7 +105,16 @@ export {
 } from './PageHeader';
 export { type Step, Stepper, type StepperProps } from './Stepper';
 export { type NavItem, type NavSection, Sidebar, type SidebarProps } from './Sidebar';
-export { TopBar, type TopBarProps, UserMenu, type UserMenuItem, type UserMenuProps } from './TopBar';
+export {
+  ContextSwitcher,
+  type ContextSwitcherOption,
+  type ContextSwitcherProps,
+  TopBar,
+  type TopBarProps,
+  UserMenu,
+  type UserMenuItem,
+  type UserMenuProps,
+} from './TopBar';
 export { AppShell, type AppShellProps } from './AppShell';
 
 // ---- Words (F0.07) ----------------------------------------------------------------------------------------

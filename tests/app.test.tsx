@@ -179,7 +179,7 @@ describe('shell, top bar and language', () => {
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' });
     expect(screen.getByRole('banner')).toBeInTheDocument();
     expect(screen.getByRole('main')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Estate: All estates/ })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Estate: All estates' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'No approvals waiting' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
     expect(await axeViolations(appRoot)).toEqual([]);

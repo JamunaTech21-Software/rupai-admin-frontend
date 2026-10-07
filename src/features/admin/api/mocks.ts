@@ -11,7 +11,7 @@ import {
   requireIfMatch,
 } from '@/lib/mocking/contract';
 
-import { type Permission, type Role, type User } from './schemas';
+import { type Permission, type Role, type ScopeGrant, type User } from './schemas';
 
 /**
  * In-memory identity API (P1.01) for VITE_MOCK_API=admin and for tests. It follows the backend's rules that the
@@ -58,6 +58,8 @@ function catalogue(): Permission[] {
 interface Store {
   roles: Role[];
   users: User[];
+  /** Data-scope grants (P1.03), all users together. */
+  scopes: ScopeGrant[];
   /** For the ids of created records. */
   sequence: number;
 }
@@ -125,10 +127,37 @@ function seed(): Store {
   const store: Store = {
     roles,
     users: [user('usr_admin', 'admin', ['rol_admin']), user('usr_rahim', 'rahim', ['rol_supervisor'])],
+    scopes: [
+      scopeGrant('scp_1', 'usr_admin', 'all_estates', null, null),
+      scopeGrant('scp_2', 'usr_rahim', 'estate', '3', null),
+      scopeGrant('scp_3', 'usr_rahim', 'division', '12', '2025-12-31T17:59:59.000Z'),
+    ],
     sequence: 0,
   };
   recount(store);
   return store;
+}
+
+function scopeGrant(
+  id: string,
+  userId: string,
+  type: ScopeGrant['scope_type'],
+  scopeId: string | null,
+  expiresAt: string | null,
+): ScopeGrant {
+  return {
+    id,
+    user_id: userId,
+    scope_type: type,
+    scope_id: scopeId,
+    granted_at: NOW,
+    granted_by: 'usr_admin',
+    expires_at: expiresAt,
+    active: expiresAt === null || new Date(expiresAt) > new Date(),
+    version: 1,
+    created_at: NOW,
+    updated_at: null,
+  };
 }
 
 function grant(roles: readonly Role[], roleId: string, expiresAt: string | null): User['roles'][number] {
@@ -226,6 +255,72 @@ export function adminMocks(base = '/api/v1'): RequestHandler[] {
       if (refused) return refused;
       Object.assign(user, (await request.json()) as Partial<User>);
       return ok(touch(user), { version: user.version });
+    }),
+    // ---- Data scope (P1.03); before /users/:id/:action, which would otherwise take POST …/scopes ----
+    http.get(`${base}/users/:id/scopes`, ({ request, params }) => {
+      const refused = requireAuth(request);
+      if (refused) return refused;
+      if (!store.users.some((u) => u.id === params.id)) return notFound();
+      return page(
+        request,
+        store.scopes.filter((g) => g.user_id === params.id),
+      );
+    }),
+    http.post(`${base}/users/:id/scopes`, async ({ request, params }) => {
+      const refused = requireAuth(request);
+      if (refused) return refused;
+      const userId = String(params.id);
+      if (!store.users.some((u) => u.id === userId)) return notFound();
+      const body = (await request.json()) as {
+        scope_type: ScopeGrant['scope_type'];
+        scope_id?: string | null;
+        expires_at?: string | null;
+      };
+      const scopeId = body.scope_type === 'all_estates' ? null : (body.scope_id ?? null);
+      if (body.expires_at && new Date(body.expires_at) <= new Date()) {
+        return apiError(422, 'VALIDATION_FAILED', 'The request is not valid.', [
+          { field: 'expires_at', code: 'VALIDATION_FAILED', message: 'Must be in the future.' },
+        ]);
+      }
+      const held = store.scopes.some(
+        (g) => g.user_id === userId && g.scope_type === body.scope_type && g.scope_id === scopeId,
+      );
+      if (held) {
+        return apiError(422, 'DUPLICATE_KEY', 'The user already holds this scope.', [
+          {
+            field: 'scope_id',
+            code: 'DUPLICATE_KEY',
+            message: 'Change the existing grant’s expiry instead.',
+          },
+        ]);
+      }
+      store.sequence += 1;
+      const added = scopeGrant(
+        `scp_new_${String(store.sequence)}`,
+        userId,
+        body.scope_type,
+        scopeId,
+        body.expires_at ?? null,
+      );
+      store.scopes.push(added);
+      return created(added, `${base}/users/${userId}/scopes/${added.id}`, added.version);
+    }),
+    http.patch(`${base}/users/:id/scopes/:grantId`, async ({ request, params }) => {
+      const found = store.scopes.find((g) => g.user_id === params.id && g.id === params.grantId);
+      if (!found) return notFound();
+      const refused = requireAuth(request) ?? requireIfMatch(request, found.version);
+      if (refused) return refused;
+      const body = (await request.json()) as { expires_at: string | null };
+      found.expires_at = body.expires_at;
+      found.active = body.expires_at === null || new Date(body.expires_at) > new Date();
+      return ok(touch(found), { version: found.version });
+    }),
+    http.delete(`${base}/users/:id/scopes/:grantId`, ({ request, params }) => {
+      const refused = requireAuth(request);
+      if (refused) return refused;
+      const before = store.scopes.length;
+      store.scopes = store.scopes.filter((g) => !(g.user_id === params.id && g.id === params.grantId));
+      return store.scopes.length === before ? notFound() : noContent();
     }),
     http.post(`${base}/users/:id/:action`, async ({ request, params }) => {
       const user = store.users.find((u) => u.id === params.id);

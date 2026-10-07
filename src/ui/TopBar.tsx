@@ -100,3 +100,83 @@ export function UserMenu({ name, detail, items, onAction }: UserMenuProps) {
     </MenuTrigger>
   );
 }
+
+export interface ContextSwitcherOption {
+  readonly id: string;
+  readonly label: string;
+}
+
+export interface ContextSwitcherProps {
+  /** What is being chosen: "Estate". With the current choice it names the button for screen readers. */
+  readonly label: string;
+  readonly icon: IconName;
+  readonly options: readonly ContextSwitcherOption[];
+  readonly value: string;
+  readonly onChange: (id: string) => void;
+}
+
+/**
+ * The working context in the top bar (the estate): a button showing the current choice, opening a single-choice
+ * menu. On phones only the icon shows; the accessible name always carries the choice. With one option it is a
+ * plain label, as there is nothing to switch.
+ */
+export function ContextSwitcher({ label, icon, options, value, onChange }: ContextSwitcherProps) {
+  const current = options.find((option) => option.id === value) ?? options[0];
+  const name = `${label}: ${current?.label ?? ''}`;
+  const face = (
+    <>
+      <Icon name={icon} size="sm" className="shrink-0 text-primary" />
+      <span className="hidden max-w-40 truncate md:inline">{current?.label}</span>
+    </>
+  );
+  const faceClass =
+    'flex h-9 items-center gap-2 rounded-md border border-line bg-surface px-2.5 text-sm font-medium text-fg';
+  if (options.length <= 1) {
+    return (
+      <span role="img" aria-label={name} className={cx(faceClass, 'cursor-default')}>
+        {face}
+      </span>
+    );
+  }
+  return (
+    <MenuTrigger>
+      <AriaButton
+        aria-label={name}
+        className={cx(
+          faceClass,
+          'outline-none data-focus-visible:outline-2 data-focus-visible:outline-focus data-hovered:bg-surface-subtle',
+        )}
+      >
+        {face}
+        <Icon name="chevronDown" size="sm" className="hidden text-fg-muted md:block" />
+      </AriaButton>
+      <Popover className={cx(popover, 'max-h-80 min-w-52 overflow-y-auto')} placement="bottom end">
+        <Menu
+          selectionMode="single"
+          disallowEmptySelection
+          selectedKeys={[value]}
+          onAction={(key: Key) => {
+            onChange(String(key));
+          }}
+          className="outline-none"
+        >
+          {options.map((option) => (
+            <MenuItem
+              key={option.id}
+              id={option.id}
+              textValue={option.label}
+              className={cx(listItem, 'justify-between')}
+            >
+              {({ isSelected }) => (
+                <>
+                  <span className="truncate">{option.label}</span>
+                  {isSelected ? <Icon name="check" size="sm" className="text-primary" /> : null}
+                </>
+              )}
+            </MenuItem>
+          ))}
+        </Menu>
+      </Popover>
+    </MenuTrigger>
+  );
+}

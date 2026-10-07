@@ -10,7 +10,7 @@ import { PageHeader } from './PageHeader';
 import { type NavSection } from './Sidebar';
 import { StatCard } from './StatCard';
 import { Stepper } from './Stepper';
-import { UserMenu } from './TopBar';
+import { ContextSwitcher, UserMenu } from './TopBar';
 
 const meta = {
   title: 'Layout/App shell, page header & layout',
@@ -94,6 +94,17 @@ export const ApplicationFrame: Story = {
       title="Workforce"
       topBarActions={
         <>
+          <ContextSwitcher
+            label="Estate"
+            icon="mapPin"
+            options={[
+              { id: 'all', label: 'All my estates' },
+              { id: '3', label: 'Rupai Estate' },
+              { id: '7', label: 'Hill View Estate' },
+            ]}
+            value="3"
+            onChange={() => undefined}
+          />
           <IconButton icon="bell" label="Notifications" variant="ghost" />
           <UserMenu
             name="Abdul Karim"
