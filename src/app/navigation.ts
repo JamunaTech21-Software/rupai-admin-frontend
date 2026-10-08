@@ -14,6 +14,9 @@ interface AppNavItem {
     | 'organisation'
     | 'estates'
     | 'fields'
+    | 'factories'
+    | 'warehouses'
+    | 'parties'
     | 'users'
     | 'roles'
     | 'accessReview'
@@ -38,10 +41,25 @@ export const NAVIGATION: readonly AppNavSection[] = [
       { id: 'estates', labelKey: 'estates', href: '/estates', icon: 'leaf', permission: 'estate.view' },
       { id: 'fields', labelKey: 'fields', href: '/fields', icon: 'map', permission: 'field.view' },
       {
+        id: 'factories',
+        labelKey: 'factories',
+        href: '/factories',
+        icon: 'factory',
+        permission: 'factory.view',
+      },
+      {
+        id: 'warehouses',
+        labelKey: 'warehouses',
+        href: '/warehouses',
+        icon: 'package',
+        permission: 'warehouse.view',
+      },
+      { id: 'parties', labelKey: 'parties', href: '/parties', icon: 'user', permission: 'land.view' },
+      {
         id: 'organisation',
         labelKey: 'organisation',
         href: '/organisation',
-        icon: 'factory',
+        icon: 'settings',
         permission: 'organisation.view',
       },
     ],

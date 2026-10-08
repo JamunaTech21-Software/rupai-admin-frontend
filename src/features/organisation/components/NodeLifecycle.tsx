@@ -4,7 +4,7 @@ import { errorBehaviour } from '@/lib/errors';
 import { useTranslation } from '@/lib/i18n';
 import { Badge, Button, ConfirmDialog, toast } from '@/ui';
 
-import { useDeleteNode, useSetNodeStatus } from '../api/hierarchy';
+import { type NodePath, useDeleteNode, useSetNodeStatus } from '../api/hierarchy';
 import { type NodeStatus } from '../api/schemas';
 
 /** Active / Inactive. */
@@ -27,7 +27,7 @@ export interface LifecycleText {
 }
 
 export interface NodeLifecycleProps {
-  readonly path: 'estates' | 'divisions' | 'sections' | 'fields';
+  readonly path: NodePath;
   readonly node: { readonly id: string; readonly version: number; readonly status: NodeStatus };
   /** For the conflict dialog: "Rupai Hills Tea Estate". */
   readonly subject: string;

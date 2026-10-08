@@ -14,9 +14,15 @@ import { homeRoutes } from '@/features/home';
 import {
   estateCreateRoutes,
   estateRoutes,
+  factoryCreateRoutes,
+  factoryRoutes,
   fieldCreateRoutes,
   fieldRoutes,
   organisationRoutes,
+  partyCreateRoutes,
+  partyRoutes,
+  warehouseCreateRoutes,
+  warehouseRoutes,
 } from '@/features/organisation';
 
 import { ForbiddenPage, NotFoundPage, RouteError, ServerErrorPage } from './errors';
@@ -73,6 +79,15 @@ export const routes: RouteObject[] = [
               { element: <RequirePermission permission="estate.view" />, children: estateRoutes },
               { element: <RequirePermission permission="field.create" />, children: fieldCreateRoutes },
               { element: <RequirePermission permission="field.view" />, children: fieldRoutes },
+              { element: <RequirePermission permission="factory.create" />, children: factoryCreateRoutes },
+              { element: <RequirePermission permission="factory.view" />, children: factoryRoutes },
+              {
+                element: <RequirePermission permission="warehouse.create" />,
+                children: warehouseCreateRoutes,
+              },
+              { element: <RequirePermission permission="warehouse.view" />, children: warehouseRoutes },
+              { element: <RequirePermission permission="land.create" />, children: partyCreateRoutes },
+              { element: <RequirePermission permission="land.view" />, children: partyRoutes },
               ...designSystemRoutes,
               {
                 element: <RequirePermission permission="user.view" />,

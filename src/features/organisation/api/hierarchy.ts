@@ -27,9 +27,20 @@ export const estateKeys = createQueryKeys('estates');
 export const divisionKeys = createQueryKeys('divisions');
 export const sectionKeys = createQueryKeys('sections');
 export const fieldKeys = createQueryKeys('fields');
+export const factoryKeys = createQueryKeys('factories');
+export const warehouseKeys = createQueryKeys('warehouses');
+export const partyKeys = createQueryKeys('parties');
 
 /** Anything under an estate can change its children lists and the fields list. */
-const hierarchyLists = () => [estateKeys.all, divisionKeys.all, sectionKeys.all, fieldKeys.all];
+const hierarchyLists = () => [
+  estateKeys.all,
+  divisionKeys.all,
+  sectionKeys.all,
+  fieldKeys.all,
+  factoryKeys.all,
+  warehouseKeys.all,
+  partyKeys.all,
+];
 
 // ---- Organisation (singleton) ---------------------------------------------------------------------------
 
@@ -59,7 +70,8 @@ export function useUpdateOrganisation(organisation: Organisation) {
 
 // ---- Status changes and deletes, shared by every node --------------------------------------------------
 
-type NodePath = 'estates' | 'divisions' | 'sections' | 'fields';
+export type NodePath =
+  'estates' | 'divisions' | 'sections' | 'fields' | 'factories' | 'warehouses' | 'parties';
 interface Versioned {
   readonly id: string;
   readonly version: number;
@@ -89,7 +101,15 @@ export function useDeleteNode(path: NodePath, node: Versioned) {
       await api.delete(`/${path}/${node.id}`);
     },
     // Lists only: the deleted record's own query must not refetch (it would 404 before the page leaves).
-    invalidates: () => [estateKeys.lists(), divisionKeys.lists(), sectionKeys.lists(), fieldKeys.lists()],
+    invalidates: () => [
+      estateKeys.lists(),
+      divisionKeys.lists(),
+      sectionKeys.lists(),
+      fieldKeys.lists(),
+      factoryKeys.lists(),
+      warehouseKeys.lists(),
+      partyKeys.lists(),
+    ],
   });
 }
 

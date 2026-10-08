@@ -118,3 +118,89 @@ export interface AppliedScope {
   readonly divisions?: readonly string[];
   readonly sections?: readonly string[];
 }
+
+// ---- Facilities, parties and contacts (P1.08, backend facilities.schema.ts) ----
+
+export const FACTORY_TYPES = ['own', 'external'] as const;
+export type FactoryType = (typeof FACTORY_TYPES)[number];
+export const WAREHOUSE_TYPES = ['own', 'rented', 'third_party'] as const;
+export type WarehouseType = (typeof WAREHOUSE_TYPES)[number];
+export const PARTY_TYPES = ['individual', 'organisation', 'government'] as const;
+export type PartyType = (typeof PARTY_TYPES)[number];
+export const CONTACT_TYPES = ['primary', 'accounts', 'operations', 'emergency', 'other'] as const;
+export type ContactType = (typeof CONTACT_TYPES)[number];
+
+export const FactorySchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  factory_type: z.enum(FACTORY_TYPES),
+  primary_estate_id: z.string().nullable(),
+  location: z.string().nullable(),
+  daily_capacity_kg: z.string().nullable(),
+  manager_profile_id: z.string().nullable(),
+  licence_number: z.string().nullable(),
+  licence_expiry: z.string().nullable(),
+  status: z.enum(STATUSES),
+  version: z.number(),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
+});
+export type Factory = z.infer<typeof FactorySchema>;
+
+export const WarehouseSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  warehouse_type: z.enum(WAREHOUSE_TYPES),
+  location: z.string().nullable(),
+  capacity_kg: z.string().nullable(),
+  keeper_profile_id: z.string().nullable(),
+  /** The primary contact's phone: read-only here, maintained from the contacts. */
+  phone: z.string().nullable(),
+  licence_number: z.string().nullable(),
+  licence_expiry: z.string().nullable(),
+  tin: z.string().nullable(),
+  vat_registration: z.string().nullable(),
+  status: z.enum(STATUSES),
+  version: z.number(),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
+});
+export type Warehouse = z.infer<typeof WarehouseSchema>;
+
+export const PartySchema = z.object({
+  id: z.string(),
+  party_type: z.enum(PARTY_TYPES),
+  code: z.string(),
+  name: z.string(),
+  national_id: z.string().nullable(),
+  registration_number: z.string().nullable(),
+  address_line1: z.string().nullable(),
+  district: z.string().nullable(),
+  phone: z.string().nullable(),
+  email: z.string().nullable(),
+  status: z.enum(STATUSES),
+  version: z.number(),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
+});
+export type Party = z.infer<typeof PartySchema>;
+
+export const ContactSchema = z.object({
+  id: z.string(),
+  owner_type: z.string(),
+  owner_id: z.string(),
+  contact_name: z.string(),
+  designation: z.string().nullable(),
+  contact_type: z.enum(CONTACT_TYPES),
+  phone: z.string().nullable(),
+  phone_alt: z.string().nullable(),
+  email: z.string().nullable(),
+  is_primary: z.boolean(),
+  status: z.enum(STATUSES),
+  version: z.number(),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
+});
+export type Contact = z.infer<typeof ContactSchema>;

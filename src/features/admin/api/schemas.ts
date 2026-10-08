@@ -94,7 +94,8 @@ export const SCOPE_TYPES = [
   'division',
   'section',
   'department',
-  'facility',
+  'factory',
+  'warehouse',
   'self',
 ] as const;
 export type ScopeType = (typeof SCOPE_TYPES)[number];
@@ -104,7 +105,8 @@ export const GRANTABLE_SCOPE_TYPES = [
   'division',
   'section',
   'department',
-  'facility',
+  'factory',
+  'warehouse',
 ] as const satisfies readonly ScopeType[];
 export type GrantableScopeType = (typeof GRANTABLE_SCOPE_TYPES)[number];
 

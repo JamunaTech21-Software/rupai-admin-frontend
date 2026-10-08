@@ -11,7 +11,17 @@ import {
 } from '@/lib/mocking/contract';
 import { Dec } from '@/lib/money';
 
-import { type Division, type Estate, type Field, type Organisation, type Section } from './schemas';
+import {
+  type Contact,
+  type Division,
+  type Estate,
+  type Factory,
+  type Field,
+  type Organisation,
+  type Party,
+  type Section,
+  type Warehouse,
+} from './schemas';
 
 /**
  * In-memory organisation hierarchy (P1.07) for VITE_MOCK_API=organisation and for tests. It follows the backend
@@ -31,6 +41,10 @@ interface Store {
   sequence: number;
   /** null: all estates; otherwise the estate ids a scoped user sees. */
   scope: string[] | null;
+  factories: Factory[];
+  warehouses: Warehouse[];
+  parties: Party[];
+  contacts: Contact[];
 }
 
 const base = { status: 'active' as const, version: 1, created_at: NOW, updated_at: null };
@@ -141,6 +155,82 @@ function seed(): Store {
     ],
     sequence: 0,
     scope: null,
+    factories: [
+      {
+        ...base,
+        id: 'fa1',
+        code: 'DEMO-F1',
+        name: 'Rupai Central Factory',
+        factory_type: 'own',
+        primary_estate_id: 'e1',
+        location: null,
+        daily_capacity_kg: '45000.000',
+        manager_profile_id: null,
+        licence_number: 'TB-123',
+        // Long past: the list flags it as expired.
+        licence_expiry: '2020-06-30',
+      },
+    ],
+    warehouses: [
+      {
+        ...base,
+        id: 'w1',
+        code: 'DEMO-W1',
+        name: 'Chattogram Auction Warehouse',
+        warehouse_type: 'rented',
+        location: 'Chattogram',
+        capacity_kg: '250000.000',
+        keeper_profile_id: null,
+        phone: '+8801711000001',
+        licence_number: null,
+        licence_expiry: null,
+        tin: null,
+        vat_registration: null,
+      },
+    ],
+    parties: [
+      {
+        ...base,
+        id: 'p1',
+        party_type: 'individual',
+        code: 'DEMO-P1',
+        name: 'Abdul Haque (lessee)',
+        national_id: null,
+        registration_number: null,
+        address_line1: null,
+        district: 'Moulvibazar',
+        phone: null,
+        email: null,
+      },
+    ],
+    contacts: [
+      {
+        ...base,
+        id: 'c1',
+        owner_type: 'warehouse',
+        owner_id: 'w1',
+        contact_name: 'Karim Uddin',
+        designation: 'Warehouse in-charge',
+        contact_type: 'primary',
+        phone: '+8801711000001',
+        phone_alt: null,
+        email: null,
+        is_primary: true,
+      },
+      {
+        ...base,
+        id: 'c2',
+        owner_type: 'warehouse',
+        owner_id: 'w1',
+        contact_name: 'Salma Begum',
+        designation: 'Accounts',
+        contact_type: 'accounts',
+        phone: '+8801711000002',
+        phone_alt: null,
+        email: null,
+        is_primary: false,
+      },
+    ],
   };
 }
 
@@ -212,17 +302,179 @@ function scopedPage(request: Request, rows: readonly Record<string, unknown>[]) 
   );
 }
 
-type NodePath = 'estates' | 'divisions' | 'sections' | 'fields';
+type NodePath = 'estates' | 'divisions' | 'sections' | 'fields' | 'factories' | 'warehouses' | 'parties';
 const tables = () => ({
   estates: store.estates,
   divisions: store.divisions,
   sections: store.sections,
   fields: store.fields,
+  factories: store.factories,
+  warehouses: store.warehouses,
+  parties: store.parties,
 });
 const hasChildren = (path: NodePath, id: string) =>
   (path === 'estates' && store.divisions.some((d) => d.estate_id === id)) ||
   (path === 'divisions' && store.sections.some((s) => s.division_id === id)) ||
   (path === 'sections' && store.fields.some((f) => f.section_id === id));
+
+// ---- Facilities, parties and contacts (P1.08) --------------------------------------------------------------
+
+const OWNER_TYPE = { warehouses: 'warehouse', parties: 'party' } as const;
+type OwnerPath = keyof typeof OWNER_TYPE;
+
+/** The owner's contacts, primary first. */
+const contactsOf = (path: OwnerPath, id: string) => {
+  const own = store.contacts.filter((c) => c.owner_type === OWNER_TYPE[path] && c.owner_id === id);
+  return [...own.filter((c) => c.is_primary), ...own.filter((c) => !c.is_primary)];
+};
+
+/** warehouse.phone mirrors the primary contact's phone. */
+function syncWarehousePhone(id: string) {
+  const warehouse = store.warehouses.find((w) => w.id === id);
+  if (warehouse) warehouse.phone = contactsOf('warehouses', id).find((c) => c.is_primary)?.phone ?? null;
+}
+
+function facilityMocks(b: string): RequestHandler[] {
+  const createMaster = <T extends { id: string; code: string }>(
+    path: 'factories' | 'warehouses' | 'parties',
+    prefix: string,
+    defaults: Omit<T, 'id' | 'code'>,
+  ) =>
+    http.post(`${b}/${path}`, async ({ request }) => {
+      const refused = requireAuth(request);
+      if (refused) return refused;
+      const body = (await request.json()) as Record<string, unknown> & { code: string };
+      if (path === 'warehouses' && 'phone' in body) {
+        return apiError(422, 'VALIDATION_FAILED', 'The request is not valid.', [
+          { field: 'phone', code: 'UNRECOGNIZED', message: 'The phone comes from the primary contact.' },
+        ]);
+      }
+      const list = store[path] as unknown as T[];
+      if (list.some((row) => row.code === body.code)) return duplicate('code', 'This code is already used.');
+      const row = {
+        ...defaults,
+        ...body,
+        id: nextId(prefix),
+        created_at: new Date().toISOString(),
+      } as unknown as T;
+      list.push(row);
+      return created(row, `${b}/${path}/${row.id}`, 1);
+    });
+
+  const ownerHandlers = (['warehouses', 'parties'] as const).flatMap((path) => {
+    const owner = (id: unknown) => (store[path] as { id: string }[]).find((o) => o.id === id);
+    const contact = (ownerId: unknown, contactId: unknown) =>
+      contactsOf(path, String(ownerId)).find((c) => c.id === contactId);
+    return [
+      http.get(`${b}/${path}/:id/contacts`, ({ request, params }) => {
+        const refused = requireAuth(request);
+        if (refused) return refused;
+        if (!owner(params.id)) return notFound();
+        return scopedPage(request, contactsOf(path, String(params.id)));
+      }),
+      http.post(`${b}/${path}/:id/contacts`, async ({ request, params }) => {
+        const refused = requireAuth(request);
+        if (refused) return refused;
+        if (!owner(params.id)) return notFound();
+        const body = (await request.json()) as Partial<Contact> & {
+          contact_name: string;
+          is_primary?: boolean;
+        };
+        const existing = contactsOf(path, String(params.id));
+        const primary = existing.length === 0 || body.is_primary === true;
+        if (primary) for (const c of existing) c.is_primary = false;
+        const row: Contact = {
+          ...base,
+          id: nextId('c'),
+          owner_type: OWNER_TYPE[path],
+          owner_id: String(params.id),
+          designation: null,
+          contact_type: 'other',
+          phone: null,
+          phone_alt: null,
+          email: null,
+          ...body,
+          is_primary: primary,
+        };
+        store.contacts.push(row);
+        if (path === 'warehouses') syncWarehousePhone(String(params.id));
+        return created(row, `${b}/${path}/${String(params.id)}/contacts/${row.id}`, 1);
+      }),
+      http.put(`${b}/${path}/:id/contacts/:contactId`, async ({ request, params }) => {
+        const row = contact(params.id, params.contactId);
+        if (!row) return notFound();
+        const refused = requireAuth(request) ?? requireIfMatch(request, row.version);
+        if (refused) return refused;
+        Object.assign(row, (await request.json()) as Partial<Contact>);
+        if (path === 'warehouses') syncWarehousePhone(String(params.id));
+        return ok(touch(row), { version: row.version });
+      }),
+      http.post(`${b}/${path}/:id/contacts/:contactId/make-primary`, ({ request, params }) => {
+        const row = contact(params.id, params.contactId);
+        if (!row) return notFound();
+        const refused = requireAuth(request) ?? requireIfMatch(request, row.version);
+        if (refused) return refused;
+        for (const c of contactsOf(path, String(params.id))) c.is_primary = c.id === row.id;
+        if (path === 'warehouses') syncWarehousePhone(String(params.id));
+        return ok(touch(row), { version: row.version });
+      }),
+      http.delete(`${b}/${path}/:id/contacts/:contactId`, ({ request, params }) => {
+        const refused = requireAuth(request);
+        if (refused) return refused;
+        const row = contact(params.id, params.contactId);
+        if (!row) return notFound();
+        store.contacts = store.contacts.filter((c) => c.id !== row.id);
+        if (path === 'warehouses') syncWarehousePhone(String(params.id));
+        return noContent();
+      }),
+    ];
+  });
+
+  return [
+    http.get(`${b}/factories`, ({ request }) => requireAuth(request) ?? scopedPage(request, store.factories)),
+    http.get(
+      `${b}/warehouses`,
+      ({ request }) => requireAuth(request) ?? scopedPage(request, store.warehouses),
+    ),
+    http.get(`${b}/parties`, ({ request }) => requireAuth(request) ?? scopedPage(request, store.parties)),
+    createMaster<Factory>('factories', 'fa', {
+      ...base,
+      name: '',
+      factory_type: 'own',
+      primary_estate_id: null,
+      location: null,
+      daily_capacity_kg: null,
+      manager_profile_id: null,
+      licence_number: null,
+      licence_expiry: null,
+    }),
+    createMaster<Warehouse>('warehouses', 'w', {
+      ...base,
+      name: '',
+      warehouse_type: 'own',
+      location: null,
+      capacity_kg: null,
+      keeper_profile_id: null,
+      phone: null,
+      licence_number: null,
+      licence_expiry: null,
+      tin: null,
+      vat_registration: null,
+    }),
+    createMaster<Party>('parties', 'p', {
+      ...base,
+      party_type: 'individual',
+      name: '',
+      national_id: null,
+      registration_number: null,
+      address_line1: null,
+      district: null,
+      phone: null,
+      email: null,
+    }),
+    ...ownerHandlers,
+  ];
+}
 
 export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
   const b = apiBase;
@@ -417,7 +669,11 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
     }),
 
     // ---- Shared by every node: read, replace, status, delete ----
-    ...(['estates', 'divisions', 'sections', 'fields'] as const).flatMap((path) => [
+    ...facilityMocks(b),
+
+    ...(
+      ['estates', 'divisions', 'sections', 'fields', 'factories', 'warehouses', 'parties'] as const
+    ).flatMap((path) => [
       http.get(`${b}/${path}/:id`, ({ request, params }) => {
         const refused = requireAuth(request);
         if (refused) return refused;
