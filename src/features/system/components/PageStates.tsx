@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react';
 
 import { useMe } from '@/lib/auth';
-import { describeError, errorBehaviour } from '@/lib/errors';
+import { describeError, errorBehaviour, isApiError } from '@/lib/errors';
 import { useTranslation } from '@/lib/i18n';
 import { Alert, Button, EmptyState, type EmptyKind, ErrorState, Link, Modal, Skeleton, Stack } from '@/ui';
 
@@ -130,6 +130,11 @@ export interface RefusalDialogProps {
 export function RefusalDialog({ error, onClose }: RefusalDialogProps) {
   const { t } = useTranslation('states');
   const { message, requestId } = error ? describeError(error) : { message: '', requestId: null };
+  // The headline says what was refused; a detail without a field often says what to do instead
+  // ("Deactivate it instead"), so those are shown under it.
+  const advice = isApiError(error)
+    ? [...new Set(error.details.filter((d) => !d.field && d.message !== message).map((d) => d.message))]
+    : [];
   return (
     <Modal
       isOpen={Boolean(error)}
@@ -142,6 +147,11 @@ export function RefusalDialog({ error, onClose }: RefusalDialogProps) {
     >
       <Stack gap={2}>
         <p className="text-fg">{message}</p>
+        {advice.map((line) => (
+          <p key={line} className="text-fg">
+            {line}
+          </p>
+        ))}
         {requestId ? (
           <p className="text-sm text-fg-muted">
             <code className="font-mono">{requestId}</code>

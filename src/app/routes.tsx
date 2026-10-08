@@ -11,6 +11,13 @@ import {
 import { accountRoutes, changePasswordRoute, publicAuthRoutes } from '@/features/auth';
 import { designSystemRoutes } from '@/features/design-system';
 import { homeRoutes } from '@/features/home';
+import {
+  estateCreateRoutes,
+  estateRoutes,
+  fieldCreateRoutes,
+  fieldRoutes,
+  organisationRoutes,
+} from '@/features/organisation';
 
 import { ForbiddenPage, NotFoundPage, RouteError, ServerErrorPage } from './errors';
 import { RequireAuth, RequirePermission } from './guards';
@@ -61,6 +68,11 @@ export const routes: RouteObject[] = [
             children: [
               ...homeRoutes,
               ...accountRoutes,
+              { element: <RequirePermission permission="organisation.view" />, children: organisationRoutes },
+              { element: <RequirePermission permission="estate.create" />, children: estateCreateRoutes },
+              { element: <RequirePermission permission="estate.view" />, children: estateRoutes },
+              { element: <RequirePermission permission="field.create" />, children: fieldCreateRoutes },
+              { element: <RequirePermission permission="field.view" />, children: fieldRoutes },
               ...designSystemRoutes,
               {
                 element: <RequirePermission permission="user.view" />,

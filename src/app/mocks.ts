@@ -1,6 +1,7 @@
 import { type RequestHandler } from 'msw';
 
 import { loadAdminMocks } from '@/features/admin';
+import { loadOrganisationMocks } from '@/features/organisation';
 import { loadSystemMocks } from '@/features/system';
 import { isFeatureMocked, type MockSetting, mockSetting } from '@/lib/mocks';
 
@@ -14,6 +15,7 @@ const FEATURE_MOCKS: Record<string, () => Promise<{ handlers: RequestHandler[] }
   auth: () => import('@/lib/mocking/contract').then((m) => ({ handlers: m.authMocks() })),
   jobs: () => import('@/lib/mocking/contract').then((m) => ({ handlers: m.jobMocks() })),
   admin: loadAdminMocks,
+  organisation: loadOrganisationMocks,
 };
 
 /**
