@@ -9,7 +9,19 @@ import { type IconName, type NavItem, type NavSection } from '@/ui';
  */
 interface AppNavItem {
   readonly id: string;
-  readonly labelKey: 'dashboard' | 'users' | 'roles' | 'accessReview' | 'audit' | 'designTokens';
+  readonly labelKey:
+    | 'dashboard'
+    | 'organisation'
+    | 'estates'
+    | 'fields'
+    | 'factories'
+    | 'warehouses'
+    | 'parties'
+    | 'users'
+    | 'roles'
+    | 'accessReview'
+    | 'audit'
+    | 'designTokens';
   readonly href: string;
   readonly icon: IconName;
   /** Backend permission code (`resource.action`); none means every signed-in user. */
@@ -17,12 +29,41 @@ interface AppNavItem {
 }
 
 interface AppNavSection {
-  readonly id: 'main' | 'administration' | 'system';
+  readonly id: 'main' | 'organisation' | 'administration' | 'system';
   readonly items: readonly AppNavItem[];
 }
 
 export const NAVIGATION: readonly AppNavSection[] = [
   { id: 'main', items: [{ id: 'dashboard', labelKey: 'dashboard', href: '/', icon: 'home' }] },
+  {
+    id: 'organisation',
+    items: [
+      { id: 'estates', labelKey: 'estates', href: '/estates', icon: 'leaf', permission: 'estate.view' },
+      { id: 'fields', labelKey: 'fields', href: '/fields', icon: 'map', permission: 'field.view' },
+      {
+        id: 'factories',
+        labelKey: 'factories',
+        href: '/factories',
+        icon: 'factory',
+        permission: 'factory.view',
+      },
+      {
+        id: 'warehouses',
+        labelKey: 'warehouses',
+        href: '/warehouses',
+        icon: 'package',
+        permission: 'warehouse.view',
+      },
+      { id: 'parties', labelKey: 'parties', href: '/parties', icon: 'user', permission: 'land.view' },
+      {
+        id: 'organisation',
+        labelKey: 'organisation',
+        href: '/organisation',
+        icon: 'settings',
+        permission: 'organisation.view',
+      },
+    ],
+  },
   {
     id: 'administration',
     items: [

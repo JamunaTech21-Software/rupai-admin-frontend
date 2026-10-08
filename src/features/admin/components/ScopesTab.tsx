@@ -15,7 +15,16 @@ const ScopeExpiryModal = lazy(() =>
 );
 
 /** Widest first: the order of the types in the hierarchy. */
-const TYPE_RANK = ['all_estates', 'estate', 'division', 'section', 'department', 'facility', 'self'];
+const TYPE_RANK = [
+  'all_estates',
+  'estate',
+  'division',
+  'section',
+  'department',
+  'factory',
+  'warehouse',
+  'self',
+];
 
 /** Ids are digit strings: a shorter one is smaller. */
 const compareIds = (a: string, b: string) => a.length - b.length || a.localeCompare(b);
@@ -80,7 +89,7 @@ function GrantRow({
 type Dialog = { kind: 'grant' } | { kind: 'expiry' | 'revoke'; grant: ScopeGrant } | null;
 
 /**
- * Admin → Users → one user → Scopes (P1.03): which estates, divisions, sections, departments or facilities the
+ * Admin → Users → one user → Scopes (P1.03): which estates, divisions, sections, departments, factories or warehouses the
  * user's data is limited to. The effective scope is the union of the active grants; self is implicit.
  */
 export function ScopesTab({

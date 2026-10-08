@@ -20,7 +20,7 @@ export interface ScopeGrantModalProps {
 const RECORD_ID = /^[1-9]\d{0,17}$/;
 
 /**
- * Grant a data scope: all estates, or one estate, division, section, department or facility. Until estate
+ * Grant a data scope: all estates, or one estate, division, section, department, factory or warehouse. Until estate
  * set-up (P1.07) gives those records names, the target is typed as its number.
  */
 export function ScopeGrantModal({ user, isOpen, onClose, onRefused }: ScopeGrantModalProps) {

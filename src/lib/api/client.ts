@@ -192,6 +192,10 @@ export function createApiClient(options: ApiClientOptions) {
       method,
       headers,
       credentials: 'same-origin',
+      // TanStack Query is the cache. The browser's HTTP cache must not answer API reads: the API's ETag is the
+      // record version, which a derived field (e.g. warehouse.phone, from the primary contact) changes without
+      // bumping, so a revalidated 304 would show stale data.
+      cache: 'no-store',
       ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
       ...(opts.signal ? { signal: opts.signal } : {}),
     };
