@@ -157,6 +157,11 @@ export interface TableUrlOptions {
   /** The sort when the URL has none, in API form: `"-created_at"`. Not written to the URL. */
   readonly defaultSort?: string;
   readonly pageSize?: number;
+  /**
+   * Filters that apply when the URL has none for that key (e.g. a required date range: the last 7 days). They
+   * are sent to the API and shown in the controls, but not written to the URL and not counted by hasFilters.
+   */
+  readonly defaultFilters?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -164,13 +169,18 @@ export interface TableUrlOptions {
  * so the user never lands on an empty page 7 of a narrower result.
  */
 export function useUrlTableState(options: TableUrlOptions = {}) {
-  const { defaultSort = '', pageSize: defaultSize = 25 } = options;
+  const { defaultSort = '', pageSize: defaultSize = 25, defaultFilters } = options;
   const [params, update] = useQueryUpdater();
   const { page, pageSize } = readPage(params, defaultSize);
   const sortParam = params.get('sort');
   const sort = useMemo(() => parseSort(sortParam ?? defaultSort), [sortParam, defaultSort]);
   const search = params.toString();
-  const filters = useMemo(() => readFilters(new URLSearchParams(search)), [search]);
+  const fromUrl = useMemo(() => readFilters(new URLSearchParams(search)), [search]);
+  const defaultsKey = JSON.stringify(defaultFilters ?? {});
+  const filters = useMemo(
+    () => ({ ...(JSON.parse(defaultsKey) as Record<string, string>), ...fromUrl }),
+    [defaultsKey, fromUrl],
+  );
 
   const onSortChange = useCallback(
     (next: readonly SortTerm[]) => {
@@ -185,9 +195,21 @@ export function useUrlTableState(options: TableUrlOptions = {}) {
     },
     [update],
   );
+  /** Several filters in one URL change (a date range's from and to). */
+  const setFilters = useCallback(
+    (changes: Readonly<Record<string, string | null>>) => {
+      update({
+        ...Object.fromEntries(
+          Object.entries(changes).map(([key, value]) => [key, value === '' ? null : value]),
+        ),
+        page: null,
+      });
+    },
+    [update],
+  );
   const clearFilters = useCallback(() => {
-    update({ ...Object.fromEntries(Object.keys(filters).map((key) => [key, null])), page: null });
-  }, [update, filters]);
+    update({ ...Object.fromEntries(Object.keys(fromUrl).map((key) => [key, null])), page: null });
+  }, [update, fromUrl]);
 
   /** The list request's query string: exactly the API grammar, with defaults filled in. */
   const apiQuery = useMemo(() => {
@@ -205,8 +227,9 @@ export function useUrlTableState(options: TableUrlOptions = {}) {
     sort,
     filters,
     setFilter,
+    setFilters,
     clearFilters,
-    hasFilters: Object.keys(filters).length > 0,
+    hasFilters: Object.keys(fromUrl).some((key) => defaultFilters?.[key] !== fromUrl[key]),
     apiQuery,
     onSortChange,
     onPageChange: useCallback(

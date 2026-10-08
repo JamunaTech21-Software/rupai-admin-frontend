@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 
-import { api, useIdempotencyKey } from '@/lib/api';
+import { api, isApiError, useIdempotencyKey } from '@/lib/api';
 import { cachePolicy, useApiMutation, usePagedList } from '@/lib/query';
 
-import { permissionKeys, roleKeys, userKeys } from './keys';
+import { accessKeys, permissionKeys, roleKeys, userKeys } from './keys';
 import { type Permission, PermissionSchema, type Role, RoleSchema } from './schemas';
 
 export function useRolesList() {
@@ -74,7 +74,22 @@ export interface RoleInput {
   readonly permissions: readonly string[];
 }
 
-const roleInvalidation = (id: string) => [roleKeys.detail(id), roleKeys.lists(), userKeys.all];
+/** Authorisations for the users who already hold a role, when a change broadens it (P1.04). */
+export type RoleAuthorisations = readonly {
+  readonly user_id: string;
+  readonly key: string;
+  readonly reason: string;
+}[];
+
+const withAuthorisations = (authorisations?: RoleAuthorisations) =>
+  authorisations && authorisations.length > 0 ? { authorisations } : {};
+
+const roleInvalidation = (id: string) => [
+  roleKeys.detail(id),
+  roleKeys.lists(),
+  userKeys.all,
+  accessKeys.all,
+];
 
 export function useCreateRole() {
   return useApiMutation({
@@ -89,14 +104,18 @@ export function useCreateRole() {
  */
 export function useUpdateRole(role: Role) {
   return useApiMutation({
-    mutationFn: async (input: RoleInput) => {
+    mutationFn: async ({ authorisations, ...input }: RoleInput & { authorisations?: RoleAuthorisations }) => {
       const response = role.is_system
         ? await api.patch(
             `/roles/${role.id}`,
             { name: input.name, description: input.description, sort_order: input.sort_order },
             { schema: RoleSchema, ifMatch: role.version },
           )
-        : await api.put(`/roles/${role.id}`, input, { schema: RoleSchema, ifMatch: role.version });
+        : await api.put(
+            `/roles/${role.id}`,
+            { ...input, ...withAuthorisations(authorisations) },
+            { schema: RoleSchema, ifMatch: role.version },
+          );
       return response.data;
     },
     invalidates: () => roleInvalidation(role.id),
@@ -107,15 +126,32 @@ export function useUpdateRole(role: Role) {
 export function useSetRoleStatus(role: Role) {
   const idempotency = useIdempotencyKey();
   return useApiMutation({
-    mutationFn: async (action: 'deactivate' | 'reactivate') =>
-      (
-        await api.post(`/roles/${role.id}/${action}`, undefined, {
-          schema: RoleSchema,
-          versioned: true,
-          ifMatch: role.version,
-          idempotencyKey: idempotency.key(),
-        })
-      ).data,
+    mutationFn: async ({
+      action,
+      authorisations,
+    }: {
+      action: 'deactivate' | 'reactivate';
+      authorisations?: RoleAuthorisations;
+    }) => {
+      try {
+        const response = await api.post(
+          `/roles/${role.id}/${action}`,
+          action === 'reactivate' ? withAuthorisations(authorisations) : undefined,
+          {
+            schema: RoleSchema,
+            versioned: true,
+            ifMatch: role.version,
+            idempotencyKey: idempotency.key(),
+          },
+        );
+        return response.data;
+      } catch (error) {
+        // The server answered with a refusal (e.g. 422 AUTHORISATION_REQUIRED): nothing was committed, and
+        // the resend carries a different body, so it needs a fresh key. A network failure keeps the key.
+        if (isApiError(error)) idempotency.reset();
+        throw error;
+      }
+    },
     invalidates: () => roleInvalidation(role.id),
     conflictSubject: () => role.name,
     onSuccess: idempotency.reset,

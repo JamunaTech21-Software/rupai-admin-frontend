@@ -1,6 +1,8 @@
 import { type RouteObject } from 'react-router';
 
 import {
+  adminAccessReviewRoutes,
+  adminAuditRoutes,
   adminRoleCreateRoutes,
   adminRoleRoutes,
   adminUserCreateRoutes,
@@ -10,7 +12,6 @@ import { accountRoutes, changePasswordRoute, publicAuthRoutes } from '@/features
 import { designSystemRoutes } from '@/features/design-system';
 import { homeRoutes } from '@/features/home';
 
-import { ComingSoon } from './ComingSoon';
 import { ForbiddenPage, NotFoundPage, RouteError, ServerErrorPage } from './errors';
 import { RequireAuth, RequirePermission } from './guards';
 import { ApplicationLayout, FocusedLayout, PrintLayout, PublicLayout } from './layouts';
@@ -66,6 +67,7 @@ export const routes: RouteObject[] = [
                 children: adminUserRoutes,
               },
               { element: <RequirePermission permission="user.create" />, children: adminUserCreateRoutes },
+              { element: <RequirePermission permission="user.view" />, children: adminAccessReviewRoutes },
               {
                 element: <RequirePermission permission="role.view" />,
                 children: adminRoleRoutes,
@@ -73,7 +75,7 @@ export const routes: RouteObject[] = [
               { element: <RequirePermission permission="role.create" />, children: adminRoleCreateRoutes },
               {
                 element: <RequirePermission permission="audit.view" />,
-                children: [{ path: 'admin/audit', element: <ComingSoon screen="audit" phase="P1.05" /> }],
+                children: adminAuditRoutes,
               },
               { path: 'forbidden', Component: ForbiddenPage },
               { path: 'error', Component: ServerErrorPage },

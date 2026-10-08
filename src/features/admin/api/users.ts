@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
+import { z } from 'zod';
 
 import { api, useIdempotencyKey } from '@/lib/api';
 import { cachePolicy, useApiMutation, usePagedList } from '@/lib/query';
 
-import { roleKeys, userKeys } from './keys';
+import { accessKeys, roleKeys, userKeys } from './keys';
 import { type User, UserPermissionsSchema, UserSchema } from './schemas';
 
 /** The users list, driven by the URL (filters, sort, page). */
@@ -108,18 +109,51 @@ export interface RoleGrant {
   readonly expires_at: string | null;
 }
 
-/** Replace the user's full set of roles (POST /users/{id}/roles with If-Match). */
+export interface AssignRolesInput {
+  readonly roles: readonly RoleGrant[];
+  /** One per conflict or sensitive permission the roles bring (P1.04); reason at least 10 characters. */
+  readonly authorisations?: readonly { readonly key: string; readonly reason: string }[];
+}
+
+/**
+ * Replace the user's full set of roles (POST /users/{id}/roles with If-Match). Without the authorisations it
+ * needs, the server answers 422 AUTHORISATION_REQUIRED (see api/access.ts).
+ */
 export function useAssignRoles(user: User) {
   return useApiMutation({
-    mutationFn: async (roles: readonly RoleGrant[]) =>
+    mutationFn: async ({ roles, authorisations }: AssignRolesInput) =>
       (
         await api.post(
           `/users/${user.id}/roles`,
-          { roles },
+          { roles, ...(authorisations && authorisations.length > 0 ? { authorisations } : {}) },
           { schema: UserSchema, versioned: true, ifMatch: user.version },
         )
       ).data,
-    invalidates: () => [...userInvalidation(user.id), userKeys.sub(user.id, 'permissions')],
+    invalidates: () => [
+      ...userInvalidation(user.id),
+      userKeys.sub(user.id, 'permissions'),
+      userKeys.sub(user.id, 'authorisations'),
+      accessKeys.all,
+    ],
     conflictSubject: () => user.username,
+  });
+}
+
+/**
+ * Usernames by id, for showing who authorised something (the API returns only ids there). One page of 200
+ * covers every account an estate has; an unknown id falls back to "#id" on screen.
+ */
+export function useUserDirectory() {
+  return useQuery({
+    ...cachePolicy('master'),
+    queryKey: userKeys.list('directory'),
+    queryFn: async ({ signal }) => {
+      const response = await api.get('/users', {
+        query: { per_page: 200, sort: 'username' },
+        schema: z.array(UserSchema),
+        signal,
+      });
+      return new Map(response.data.map((user) => [user.id, user.username]));
+    },
   });
 }

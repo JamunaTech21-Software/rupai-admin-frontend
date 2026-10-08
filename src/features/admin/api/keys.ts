@@ -4,3 +4,4 @@ import { createQueryKeys } from '@/lib/query';
 export const userKeys = createQueryKeys('users');
 export const roleKeys = createQueryKeys('roles');
 export const permissionKeys = createQueryKeys('permissions');
+export const accessKeys = createQueryKeys('access');

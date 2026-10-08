@@ -287,8 +287,7 @@ export function DataTable<TRow>({
   ) : loadMore ? (
     <div className="flex flex-col items-center gap-2">
       <p className="text-sm text-fg-muted figures" aria-live="polite">
-        Showing {rows.length}
-        {loadMore.hasMore ? '' : ' (all)'}
+        {text.showing(String(rows.length), !loadMore.hasMore)}
       </p>
       {loadMore.hasMore ? (
         <Button variant="secondary" isPending={loadMore.isLoadingMore} onPress={loadMore.onLoadMore}>

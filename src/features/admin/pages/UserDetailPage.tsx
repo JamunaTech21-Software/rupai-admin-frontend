@@ -22,7 +22,9 @@ import {
 import { usePermissionCatalogue } from '../api/roles';
 import { type User } from '../api/schemas';
 import { useDeleteUser, useSetUserStatus, useUser, useUserPermissions } from '../api/users';
+import { AuthorisationsTab } from '../components/AuthorisationsTab';
 import { PermissionMatrix } from '../components/PermissionMatrix';
+import { RecordHistory } from '../components/RecordHistory';
 import { ScopesTab } from '../components/ScopesTab';
 import { StatusBadge } from '../components/StatusBadge';
 
@@ -211,6 +213,7 @@ function UserDetail({
   setRefusal,
   onDeleted,
 }: UserDetailProps) {
+  const canSeeAudit = usePermission('audit.view');
   const { t } = useTranslation('admin');
   const setStatus = useSetUserStatus(user);
   const remove = useDeleteUser(user);
@@ -301,6 +304,20 @@ function UserDetail({
             label: t('user.tabs.scopes'),
             content: <ScopesTab user={user} canEdit={canEdit} onRefused={setRefusal} />,
           },
+          {
+            id: 'authorisations',
+            label: t('user.tabs.authorisations'),
+            content: <AuthorisationsTab user={user} canEdit={canEdit} onRefused={setRefusal} />,
+          },
+          ...(canSeeAudit
+            ? [
+                {
+                  id: 'history',
+                  label: t('user.tabs.history'),
+                  content: <RecordHistory recordType="user" recordId={user.id} />,
+                },
+              ]
+            : []),
         ]}
       />
 

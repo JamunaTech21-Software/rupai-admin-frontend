@@ -23,3 +23,13 @@ export function dhakaDate(iso: string): string {
 export function endOfDhakaDay(businessDate: string): string {
   return `${businessDate}T23:59:59+06:00`;
 }
+
+/** The first second of a business date in Dhaka, as the API's timestamp with offset. */
+export function startOfDhakaDay(businessDate: string): string {
+  return `${businessDate}T00:00:00+06:00`;
+}
+
+/** Today's date in Dhaka, shifted by `days` (negative for the past). Dhaka has no daylight saving. */
+export function dhakaToday(days = 0): string {
+  return dhakaDate(new Date(Date.now() + days * 86_400_000).toISOString());
+}
