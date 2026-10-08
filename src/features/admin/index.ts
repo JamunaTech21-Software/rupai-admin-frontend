@@ -11,6 +11,15 @@ export const adminUserRoutes: RouteObject[] = [
 export const adminUserCreateRoutes: RouteObject[] = [
   { path: 'admin/users/new', lazy: () => import('./pages/UserCreatePage') },
 ];
+/** Admin → Audit (P1.05): changes and access log; needs audit.view. */
+export const adminAuditRoutes: RouteObject[] = [
+  { path: 'admin/audit', lazy: () => import('./pages/AuditPage') },
+];
+
+/** The access review (concentration report, P1.04): needs user.view. */
+export const adminAccessReviewRoutes: RouteObject[] = [
+  { path: 'admin/access-review', lazy: () => import('./pages/AccessReviewPage') },
+];
 export const adminRoleRoutes: RouteObject[] = [
   { path: 'admin/roles', lazy: () => import('./pages/RolesPage') },
   { path: 'admin/roles/:id', lazy: () => import('./pages/RoleEditorPage') },

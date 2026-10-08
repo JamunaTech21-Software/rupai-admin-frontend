@@ -123,3 +123,72 @@ export const ScopeGrantSchema = z.object({
   updated_at: z.string().nullable(),
 });
 export type ScopeGrant = z.infer<typeof ScopeGrantSchema>;
+
+// ---- Separation of duties & sensitive permissions (P1.04, backend identity.schema.ts) ----
+
+export const AUTHORISATION_KINDS = ['sod_override', 'sensitive_grant'] as const;
+export type AuthorisationKind = (typeof AUTHORISATION_KINDS)[number];
+
+/** One conflict or sensitive permission a set of roles brings, and whether an authorisation covers it. */
+export const RequirementSchema = z.object({
+  key: z.string(),
+  kind: z.enum(AUTHORISATION_KINDS),
+  rule: z.string(),
+  title: z.string(),
+  why: z.string(),
+  permissions: z.array(z.string()),
+  authorised: z.boolean(),
+});
+export type Requirement = z.infer<typeof RequirementSchema>;
+
+/** POST /users/{id}/roles/check: what a set of roles would require, without changing anything. */
+export const AccessCheckSchema = z.object({
+  user_id: z.string(),
+  permissions: z.array(z.string()),
+  requirements: z.array(RequirementSchema),
+  missing: z.number(),
+});
+
+/** A recorded, named authorisation (override or sensitive grant) on one user. */
+export const AuthorisationSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  kind: z.enum(AUTHORISATION_KINDS),
+  rule: z.string(),
+  key: z.string(),
+  permissions: z.array(z.string()),
+  reason: z.string(),
+  authorised_by: z.string(),
+  authorised_at: z.string(),
+  removed_at: z.string().nullable(),
+  removed_by: z.string().nullable(),
+  active: z.boolean(),
+});
+export type Authorisation = z.infer<typeof AuthorisationSchema>;
+
+export const SodRuleSchema = z.object({
+  code: z.string(),
+  title: z.string(),
+  why: z.string(),
+  combinations: z.array(z.array(z.string())),
+});
+export type SodRule = z.infer<typeof SodRuleSchema>;
+
+const UserRefSchema = z.object({ id: z.string(), username: z.string() });
+
+/** GET /access/concentration-report: where authority is concentrated, and what nobody signed off. */
+export const ConcentrationReportSchema = z.object({
+  generated_at: z.string(),
+  active_overrides: z.array(AuthorisationSchema.extend({ user: UserRefSchema, still_held: z.boolean() })),
+  sensitive_holders: z.array(
+    z.object({
+      permission: z.string(),
+      why: z.string(),
+      holders: z.array(UserRefSchema.extend({ authorised: z.boolean() })),
+    }),
+  ),
+  users_with_many_roles: z.array(UserRefSchema.extend({ roles: z.array(z.string()) })),
+  approve_and_post: z.array(UserRefSchema.extend({ modules: z.array(z.string()) })),
+  unauthorised: z.array(UserRefSchema.extend({ requirements: z.array(RequirementSchema) })),
+});
+export type ConcentrationReport = z.infer<typeof ConcentrationReportSchema>;

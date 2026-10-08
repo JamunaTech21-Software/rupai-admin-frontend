@@ -22,15 +22,24 @@ import {
 } from '@/ui';
 
 import {
+  authorisationErrors,
+  authorisationsRequired,
+  type GivenAuthorisation,
+  type NeededAuthorisation,
+} from '../api/access';
+import {
   useCreateRole,
   useDeleteRole,
   usePermissionCatalogue,
   useRole,
   useSetRoleStatus,
+  type RoleAuthorisations,
   useUpdateRole,
 } from '../api/roles';
 import { type Permission, type Role, ROLE_CODE } from '../api/schemas';
+import { AuthorisationDialog } from '../components/AuthorisationDialog';
 import { PermissionMatrix } from '../components/PermissionMatrix';
+import { RecordHistory } from '../components/RecordHistory';
 
 /** Admin → Roles → a role (or a new one): its details and its permission matrix. */
 export function RoleEditorPage() {
@@ -82,10 +91,49 @@ function RoleForm({
   const isNew = role === null;
   const canEdit = usePermission(isNew ? 'role.create' : 'role.edit');
   const canDelete = usePermission('role.delete');
+  const canSeeAudit = usePermission('audit.view');
   const isSystem = role?.is_system ?? false;
   const [selected, setSelected] = useState<Set<string>>(() => new Set(role?.permissions ?? []));
   const [dialog, setDialog] = useState<Dialog>(null);
   const [refusal, setRefusal] = useState<unknown>(null);
+  const [gate, setGate] = useState<AuthorisationGate | null>(null);
+  const [gateErrors, setGateErrors] = useState<Record<number, string>>({});
+  const [gatePending, setGatePending] = useState(false);
+
+  /** Opens the separation-of-duties dialog; `resend` repeats the change with the authorisations given. */
+  function askForAuthorisations(
+    needed: NeededAuthorisation[],
+    intro: string,
+    resend: (given: GivenAuthorisation[]) => Promise<void>,
+  ) {
+    setGateErrors({});
+    setGate({ needed, intro, resend });
+  }
+
+  async function authorise(given: GivenAuthorisation[]) {
+    if (!gate) return;
+    setGatePending(true);
+    try {
+      await gate.resend(given);
+      setGate(null);
+    } catch (error) {
+      const required = authorisationsRequired(error);
+      if (required) {
+        // Someone gained the role meanwhile: ask again for exactly what the server listed.
+        askForAuthorisations(required, gate.intro, gate.resend);
+        return;
+      }
+      const reasonErrors = authorisationErrors(error);
+      if (reasonErrors) {
+        setGateErrors(reasonErrors);
+        return;
+      }
+      setGate(null);
+      if (errorBehaviour(error) !== 'conflict') setRefusal(error);
+    } finally {
+      setGatePending(false);
+    }
+  }
 
   const schema = z.object({
     code: z.string().trim().regex(ROLE_CODE, t('validation.codeFormat')),
@@ -129,6 +177,15 @@ function RoleForm({
         toast.success(t('role.saved'));
       }
     } catch (error) {
+      // The change broadens the role into a conflict or sensitive permission for users who hold it.
+      const required = authorisationsRequired(error);
+      if (required && role) {
+        askForAuthorisations(required, t('sod.roleSaveIntro', { name: role.name }), async (given) => {
+          await update.mutateAsync({ ...input, authorisations: forHolders(given) });
+          toast.success(t('role.saved'));
+        });
+        return;
+      }
       if (errorBehaviour(error) === 'conflict') return;
       if (errorBehaviour(error) === 'field-errors' && isApiError(error)) {
         if (applyServerErrors(form, error.fieldErrors).length === 0) return;
@@ -225,6 +282,12 @@ function RoleForm({
         ) : null}
       </form>
 
+      {role && canSeeAudit ? (
+        <Card title={t('role.historyTitle')} headingLevel={2}>
+          <RecordHistory recordType="role" recordId={role.id} />
+        </Card>
+      ) : null}
+
       {role ? (
         <RoleDialogs
           role={role}
@@ -233,11 +296,28 @@ function RoleForm({
             setDialog(null);
           }}
           onRefused={setRefusal}
+          onAuthorisationRequired={askForAuthorisations}
           onDeleted={() => {
             toast.success(t('role.deleted', { name: role.name }));
             void navigate('/admin/roles', { replace: true });
           }}
           usersLabel={format.number(role.user_count)}
+        />
+      ) : null}
+      {gate ? (
+        <AuthorisationDialog
+          key={gate.needed.map((item) => `${item.userId ?? ''}:${item.key}`).join('|')}
+          isOpen
+          needed={gate.needed}
+          intro={gate.intro}
+          isPending={gatePending}
+          serverErrors={gateErrors}
+          onCancel={() => {
+            setGate(null);
+          }}
+          onConfirm={(given) => {
+            void authorise(given);
+          }}
         />
       ) : null}
       <RefusalDialog
@@ -248,6 +328,17 @@ function RoleForm({
       />
     </Stack>
   );
+}
+
+interface AuthorisationGate {
+  readonly needed: NeededAuthorisation[];
+  readonly intro: string;
+  readonly resend: (given: GivenAuthorisation[]) => Promise<void>;
+}
+
+/** On a role change every authorisation names the holder it is for (from the refusal's user_id). */
+function forHolders(given: readonly GivenAuthorisation[]): RoleAuthorisations {
+  return given.map(({ key, reason, user_id }) => ({ key, reason, user_id: user_id ?? '' }));
 }
 
 function RoleActions({
@@ -302,6 +393,7 @@ function RoleDialogs({
   dialog,
   onClose,
   onRefused,
+  onAuthorisationRequired,
   onDeleted,
   usersLabel,
 }: {
@@ -309,6 +401,11 @@ function RoleDialogs({
   readonly dialog: Dialog;
   readonly onClose: () => void;
   readonly onRefused: (error: unknown) => void;
+  readonly onAuthorisationRequired: (
+    needed: NeededAuthorisation[],
+    intro: string,
+    resend: (given: GivenAuthorisation[]) => Promise<void>,
+  ) => void;
   readonly onDeleted: () => void;
   readonly usersLabel: string;
 }) {
@@ -322,6 +419,19 @@ function RoleDialogs({
       await action();
     } catch (error) {
       onClose();
+      // Reactivating gives its holders the role's permissions again: conflicts need authorising.
+      const required = authorisationsRequired(error);
+      if (required) {
+        onAuthorisationRequired(
+          required,
+          t('sod.roleReactivateIntro', { name: role.name }),
+          async (given) => {
+            await setStatus.mutateAsync({ action: 'reactivate', authorisations: forHolders(given) });
+            toast.success(t('role.reactivated', { name: role.name }));
+          },
+        );
+        return;
+      }
       if (errorBehaviour(error) !== 'conflict') onRefused(error);
     }
   }
@@ -343,7 +453,7 @@ function RoleDialogs({
         confirmLabel={active ? t('role.deactivate') : t('role.reactivate')}
         onConfirm={() =>
           run(async () => {
-            await setStatus.mutateAsync(active ? 'deactivate' : 'reactivate');
+            await setStatus.mutateAsync({ action: active ? 'deactivate' : 'reactivate' });
             toast.success(
               active
                 ? t('role.deactivated', { name: role.name })

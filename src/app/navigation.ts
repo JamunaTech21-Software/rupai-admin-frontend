@@ -9,7 +9,7 @@ import { type IconName, type NavItem, type NavSection } from '@/ui';
  */
 interface AppNavItem {
   readonly id: string;
-  readonly labelKey: 'dashboard' | 'users' | 'roles' | 'audit' | 'designTokens';
+  readonly labelKey: 'dashboard' | 'users' | 'roles' | 'accessReview' | 'audit' | 'designTokens';
   readonly href: string;
   readonly icon: IconName;
   /** Backend permission code (`resource.action`); none means every signed-in user. */
@@ -28,6 +28,13 @@ export const NAVIGATION: readonly AppNavSection[] = [
     items: [
       { id: 'users', labelKey: 'users', href: '/admin/users', icon: 'users', permission: 'user.view' },
       { id: 'roles', labelKey: 'roles', href: '/admin/roles', icon: 'shield', permission: 'role.view' },
+      {
+        id: 'access-review',
+        labelKey: 'accessReview',
+        href: '/admin/access-review',
+        icon: 'alert',
+        permission: 'user.view',
+      },
       { id: 'audit', labelKey: 'audit', href: '/admin/audit', icon: 'clipboard', permission: 'audit.view' },
     ],
   },
