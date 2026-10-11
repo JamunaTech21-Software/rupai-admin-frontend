@@ -3,6 +3,7 @@ import { useFormat, useTranslation } from '@/lib/i18n';
 import { ButtonLink, type DataColumn, DataTable, Link, PageHeader, Stack } from '@/ui';
 
 import { useFactoriesList } from '../api/facilities';
+import { useAllEstates } from '../api/hierarchy';
 import { type Factory, FACTORY_TYPES } from '../api/schemas';
 import { LicenceExpiry } from '../components/LicenceExpiry';
 import { MasterEmpty, MasterFilters } from '../components/MasterFilters';
@@ -14,6 +15,8 @@ export function FactoriesPage() {
   const format = useFormat();
   const canCreate = usePermission('factory.create');
   const list = useFactoriesList();
+  const estates = useAllEstates();
+  const notRecorded = <span className="text-fg-subtle">{t('estates.notRecorded')}</span>;
 
   const columns: DataColumn<Factory>[] = [
     {
@@ -34,21 +37,45 @@ export function FactoriesPage() {
       cell: (row) => t(`factoryType.${row.factory_type}`),
     },
     {
+      id: 'primary_estate_id',
+      header: t('factories.columns.estate'),
+      canHide: true,
+      cell: (row) => {
+        if (!row.primary_estate_id) return notRecorded;
+        const estate = estates.data?.find((e) => e.id === row.primary_estate_id);
+        if (!estate) return `#${row.primary_estate_id}`;
+        return (
+          <span className="flex flex-col">
+            <span>{estate.code}</span>
+            <span className="text-sm text-fg-muted">{estate.name}</span>
+          </span>
+        );
+      },
+    },
+    {
       id: 'daily_capacity_kg',
       header: t('factories.columns.capacity'),
       isNumeric: true,
+      align: 'center',
       canHide: true,
-      cell: (row) => (row.daily_capacity_kg ? format.quantity(row.daily_capacity_kg) : ''),
+      cell: (row) =>
+        row.daily_capacity_kg ? (
+          <span className="whitespace-nowrap">{format.quantity(row.daily_capacity_kg)}</span>
+        ) : (
+          notRecorded
+        ),
     },
     {
       id: 'licence_expiry',
       header: t('factories.columns.licence'),
+      align: 'center',
       canHide: true,
       cell: (row) => <LicenceExpiry expiry={row.licence_expiry} />,
     },
     {
       id: 'status',
       header: t('factories.columns.status'),
+      align: 'center',
       cell: (row) => <NodeStatusBadge status={row.status} />,
     },
   ];

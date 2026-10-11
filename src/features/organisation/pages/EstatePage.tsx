@@ -23,6 +23,7 @@ import {
 import { type EstateInput, useCreateEstate, useEstate, useUpdateEstate } from '../api/hierarchy';
 import { type Estate, NODE_CODE, OWNERSHIP_TYPES, PHONE } from '../api/schemas';
 import { EstateStructure } from '../components/EstateStructure';
+import { EstateSummary } from '../components/EstateSummary';
 import { NodeLifecycle } from '../components/NodeLifecycle';
 import { AreaInput } from '../components/AreaInput';
 
@@ -188,6 +189,7 @@ function EstateForm({ estate }: { readonly estate: Estate | null }) {
           ) : undefined
         }
       />
+      {estate ? <EstateSummary estate={estate} /> : null}
       {!canEdit ? <PermissionNotice /> : null}
       <form
         noValidate
@@ -215,7 +217,12 @@ function EstateForm({ estate }: { readonly estate: Estate | null }) {
               {...bind.address_line1}
               {...readOnly}
             />
-            <AreaInput label={t('estate.totalArea')} {...bind.total_area} {...readOnly} />
+            <AreaInput
+              label={t('estate.totalArea')}
+              hint={t('estate.totalAreaHint')}
+              {...bind.total_area}
+              {...readOnly}
+            />
             <Select
               label={t('estate.ownershipType')}
               isDisabled={!canEdit}

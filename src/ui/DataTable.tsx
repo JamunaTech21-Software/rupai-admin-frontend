@@ -35,6 +35,11 @@ export interface DataColumn<TRow> {
   readonly cell: (row: TRow) => ReactNode;
   /** Money, quantities, counts: right-aligned with tabular figures. */
   readonly isNumeric?: boolean;
+  /**
+   * Overrides the alignment of the header and the cells (default: end for numeric columns, start otherwise).
+   * Numeric columns keep their tabular figures whatever the alignment.
+   */
+  readonly align?: 'start' | 'center' | 'end';
   /** Only for fields the API declares sortable (index-backed). */
   readonly isSortable?: boolean;
   /** Whether the user may hide it. The row-header column can never be hidden. */
@@ -43,6 +48,13 @@ export interface DataColumn<TRow> {
   readonly isHiddenByDefault?: boolean;
   /** CSS width, e.g. `12rem`. */
   readonly width?: string;
+}
+
+const ALIGN = { start: 'text-start', center: 'text-center', end: 'text-end' } as const;
+
+/** A column's alignment: its own, or end for numbers and start for everything else. */
+function alignOf(column: { readonly align?: 'start' | 'center' | 'end'; readonly isNumeric?: boolean }) {
+  return column.align ?? (column.isNumeric ? 'end' : 'start');
 }
 
 export interface DataTableProps<TRow> {
@@ -308,7 +320,7 @@ export function DataTable<TRow>({
         className={cx(
           'inline-flex items-center gap-1 rounded-sm outline-none data-hovered:text-fg',
           'data-focus-visible:outline-2 data-focus-visible:outline-focus',
-          column.isNumeric && 'flex-row-reverse',
+          alignOf(column) === 'end' && 'flex-row-reverse',
         )}
       >
         {column.header}
@@ -424,7 +436,7 @@ export function DataTable<TRow>({
                       style={column.width ? { width: column.width } : undefined}
                       className={cx(
                         'sticky top-0 z-2 border-b border-line bg-surface-subtle px-3 py-2 text-sm font-semibold whitespace-nowrap text-fg-muted',
-                        column.isNumeric ? 'text-end' : 'text-start',
+                        ALIGN[alignOf(column)],
                         index === 0 && 'start-0 z-3',
                         index === 0 && selectable && 'start-10',
                       )}
@@ -480,8 +492,9 @@ export function DataTable<TRow>({
                         key={cell.id}
                         {...(index === 0 ? { scope: 'row' } : {})}
                         className={cx(
-                          'border-b border-line px-3 py-2 text-start align-middle font-normal text-fg',
-                          column?.isNumeric && 'text-end figures',
+                          'border-b border-line px-3 py-2 align-middle font-normal text-fg',
+                          column ? ALIGN[alignOf(column)] : 'text-start',
+                          column?.isNumeric && 'figures',
                           index === 0 &&
                             'sticky start-0 z-1 bg-surface font-medium group-hover:bg-surface-subtle',
                           index === 0 && selectable && 'start-10',

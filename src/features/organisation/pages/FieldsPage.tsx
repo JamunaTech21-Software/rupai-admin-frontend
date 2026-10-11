@@ -15,7 +15,7 @@ import {
   Stack,
 } from '@/ui';
 
-import { useAllEstates, useFieldsList } from '../api/hierarchy';
+import { useAllEstates, useFieldsList, useHierarchyNames } from '../api/hierarchy';
 import { type Field, FIELD_STATUSES, STATUSES } from '../api/schemas';
 import { NodeStatusBadge } from '../components/NodeLifecycle';
 import { ScopeNotice } from '../components/ScopeNotice';
@@ -32,39 +32,64 @@ export function FieldsPage() {
   const canCreate = usePermission('field.create');
   const list = useFieldsList();
   const estates = useAllEstates();
+  // Division and section names for the estates on this page (the list itself carries only ids).
+  const names = useHierarchyNames(list.rows.map((field) => field.estate_id));
   const { table } = list;
   const estateName = (id: string) => estates.data?.find((estate) => estate.id === id)?.code ?? `#${id}`;
 
+  const notRecorded = <span className="text-fg-subtle">—</span>;
   const columns: DataColumn<Field>[] = [
     {
       id: 'field_number',
       header: t('fields.columns.fieldNumber'),
       isSortable: true,
       cell: (field) => (
-        <Link href={`/fields/${field.id}`} className="font-mono">
-          {field.field_number}
-        </Link>
+        <span className="flex flex-col">
+          <Link href={`/fields/${field.id}`} className="font-mono">
+            {field.field_number}
+          </Link>
+          {/* A field's name is optional: shown under its number only when it has one. */}
+          {field.name ? <span className="text-sm text-fg-muted">{field.name}</span> : null}
+        </span>
       ),
     },
-    { id: 'name', header: t('fields.columns.name'), canHide: true, cell: (field) => field.name ?? '' },
     { id: 'estate', header: t('fields.columns.estate'), cell: (field) => estateName(field.estate_id) },
+    {
+      id: 'location',
+      header: t('fields.columns.location'),
+      canHide: true,
+      cell: (field) => {
+        if (names.isPending) return <span className="text-fg-subtle">…</span>;
+        const division = names.data?.divisions.get(field.division_id);
+        const section = names.data?.sections.get(field.section_id);
+        return (
+          <span className="flex flex-col">
+            <span>{section ?? `#${field.section_id}`}</span>
+            <span className="text-sm text-fg-muted">{division ?? `#${field.division_id}`}</span>
+          </span>
+        );
+      },
+    },
     {
       id: 'gross_area',
       header: t('fields.columns.gross'),
       isNumeric: true,
       isSortable: true,
+      align: 'center',
       cell: (field) => format.quantity(field.gross_area, 'ha'),
     },
     {
       id: 'planted_area',
       header: t('fields.columns.planted'),
       isNumeric: true,
+      align: 'center',
       canHide: true,
-      cell: (field) => (field.planted_area ? format.quantity(field.planted_area, 'ha') : ''),
+      cell: (field) => (field.planted_area ? format.quantity(field.planted_area, 'ha') : notRecorded),
     },
     {
       id: 'field_status',
       header: t('fields.columns.fieldStatus'),
+      align: 'center',
       cell: (field) => (
         <Badge
           tone={field.field_status === 'producing' ? 'success' : 'neutral'}
@@ -75,6 +100,7 @@ export function FieldsPage() {
     {
       id: 'status',
       header: t('fields.columns.status'),
+      align: 'center',
       cell: (field) => <NodeStatusBadge status={field.status} />,
     },
   ];

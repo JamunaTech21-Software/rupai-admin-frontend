@@ -30,6 +30,7 @@ export function FacilityForm({
   onSubmit,
   children,
   after,
+  summary,
   refusal,
   onRefused,
 }: {
@@ -47,6 +48,8 @@ export function FacilityForm({
   readonly onSubmit: (event: React.SyntheticEvent<HTMLFormElement>) => void;
   /** The form fields. */
   readonly children: ReactNode;
+  /** Shown above the form, for an existing record only (the record at a glance). */
+  readonly summary?: ReactNode;
   /** Shown after the form, for an existing record only (e.g. the contacts panel). */
   readonly after?: ReactNode;
   readonly refusal: unknown;
@@ -100,6 +103,7 @@ export function FacilityForm({
           ) : undefined
         }
       />
+      {record ? summary : null}
       {!canEdit ? <PermissionNotice /> : null}
       <form noValidate className="flex flex-col gap-6" onSubmit={onSubmit}>
         <Card title={detailsTitle} headingLevel={2}>
