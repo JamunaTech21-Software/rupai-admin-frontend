@@ -11,6 +11,8 @@ import {
 } from '@/lib/mocking/contract';
 import { Dec } from '@/lib/money';
 
+import { calendarMocks, mockHasFiscalYears, resetCalendarMocks } from './calendarMocks';
+
 import {
   type Contact,
   type Division,
@@ -239,6 +241,7 @@ let store = seed();
 /** Back to the seeded hierarchy (between tests). */
 export function resetOrganisationMocks(): void {
   store = seed();
+  resetCalendarMocks();
 }
 
 /** Make the lists behave as for a user scoped to these estates (null: all estates). */
@@ -488,7 +491,21 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
     http.put(`${b}/organisation`, async ({ request }) => {
       const refused = requireAuth(request) ?? requireIfMatch(request, store.organisation.version);
       if (refused) return refused;
-      Object.assign(store.organisation, (await request.json()) as Partial<Organisation>);
+      const changes = (await request.json()) as Partial<Organisation>;
+      if (
+        mockHasFiscalYears() &&
+        changes.fiscal_year_start_month !== undefined &&
+        changes.fiscal_year_start_month !== store.organisation.fiscal_year_start_month
+      ) {
+        return apiError(422, 'VALIDATION_FAILED', 'The request is not valid.', [
+          {
+            field: 'fiscal_year_start_month',
+            code: 'VALIDATION_FAILED',
+            message: 'cannot be changed once a fiscal year exists',
+          },
+        ]);
+      }
+      Object.assign(store.organisation, changes);
       return ok(touch(store.organisation), { version: store.organisation.version });
     }),
 
@@ -724,6 +741,7 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
         return noContent();
       }),
     ]),
+    ...calendarMocks(b, () => store.organisation.fiscal_year_start_month),
   ];
 }
 

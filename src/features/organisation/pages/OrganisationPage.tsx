@@ -9,7 +9,9 @@ import { useTranslation } from '@/lib/i18n';
 import { Alert, Button, Card, Input, PageHeader, Select, Stack, toast } from '@/ui';
 
 import { type Organisation, PHONE } from '../api/schemas';
+import { useAllFiscalYears } from '../api/calendar';
 import { useOrganisation, useUpdateOrganisation } from '../api/hierarchy';
+import { OrganisationSummary } from '../components/OrganisationSummary';
 
 const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 const blankToNull = (value: string) => (value.trim() === '' ? null : value.trim());
@@ -27,6 +29,10 @@ function OrganisationForm({ organisation }: { readonly organisation: Organisatio
   const { t } = useTranslation('org');
   const canEdit = usePermission('organisation.edit');
   const update = useUpdateOrganisation(organisation);
+  // The start month is fixed once a fiscal year exists (the server refuses the change).
+  const canViewYears = usePermission('fiscal_year.view');
+  const fiscalYears = useAllFiscalYears(canViewYears);
+  const isStartMonthFixed = (fiscalYears.data?.length ?? 0) > 0;
   const [refusal, setRefusal] = useState<unknown>(null);
 
   const required = (field: string) => t('validation.required', { field: field.toLowerCase() });
@@ -121,6 +127,7 @@ function OrganisationForm({ organisation }: { readonly organisation: Organisatio
     <Stack gap={6}>
       <PageHeader title={t('organisation.title')} description={t('organisation.description')} />
       {!canEdit ? <PermissionNotice /> : null}
+      <OrganisationSummary organisation={organisation} />
       <form
         noValidate
         className="flex flex-col gap-6"
@@ -172,9 +179,11 @@ function OrganisationForm({ organisation }: { readonly organisation: Organisatio
         <Card title={t('organisation.finance')} headingLevel={2}>
           <Select
             label={t('organisation.fiscalYearStart')}
-            hint={t('organisation.fiscalYearStartHint')}
+            hint={
+              isStartMonthFixed ? t('organisation.fiscalYearFixed') : t('organisation.fiscalYearStartHint')
+            }
             className="md:w-64"
-            isDisabled={!canEdit}
+            isDisabled={!canEdit || isStartMonthFixed}
             value={fiscal.value}
             onChange={(value) => {
               if (value) fiscal.onChange(value);

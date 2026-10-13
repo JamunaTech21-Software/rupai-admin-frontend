@@ -61,7 +61,9 @@ describe('factories', () => {
     const central = (await within(table).findByRole('link', { name: 'Rupai Central Factory' })).closest('tr');
     const noLicence = within(table).getByRole('link', { name: 'No Licence Factory' }).closest('tr');
     if (!central || !noLicence) throw new Error('rows missing');
-    expect(await within(central).findByText('DEMO-A · Rupai Hills Tea Estate')).toBeInTheDocument();
+    // The main estate: its code, with the name underneath.
+    expect(await within(central).findByText('DEMO-A')).toBeInTheDocument();
+    expect(within(central).getByText('Rupai Hills Tea Estate')).toBeInTheDocument();
     expect(within(noLicence).getAllByText('Not recorded').length).toBeGreaterThan(0);
   });
 
@@ -114,6 +116,20 @@ describe('warehouse contacts', () => {
     expect(await axeViolations(appRoot)).toEqual([]);
   });
 
+  it('the warehouse page sums it up, and the primary contact follows "Make primary"', async () => {
+    await openAs('manager', '/warehouses/w1');
+    const summary = await screen.findByRole('region', { name: 'Warehouse summary' });
+    expect(within(summary).getByText('Rented')).toBeInTheDocument();
+    expect(within(summary).getByText('250,000.000')).toBeInTheDocument();
+    expect(await within(summary).findByText('Karim Uddin')).toBeInTheDocument();
+    // No licence on record.
+    expect(within(summary).getByText('Not recorded')).toBeInTheDocument();
+
+    const panel = screen.getByRole('region', { name: 'Contacts' });
+    await userEvent.click(await within(panel).findByRole('button', { name: 'Make primary' }));
+    expect(await within(summary).findByText('Salma Begum')).toBeInTheDocument();
+  });
+
   it('edits and removes a contact', async () => {
     await openAs('manager', '/warehouses/w1');
     const panel = await screen.findByRole('region', { name: 'Contacts' });
@@ -152,6 +168,23 @@ describe('parties', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
     const row = (await within(panel).findByText('Rafiq Haque')).closest('li') as HTMLElement;
     expect(row).toHaveTextContent('Primary');
+  });
+
+  it('the list says "Not recorded" for a missing phone, and the party page sums it up', async () => {
+    await openAs('manager', '/parties');
+    const table = await screen.findByRole('table', { name: 'Parties' });
+    const row = (await within(table).findByRole('link', { name: 'Abdul Haque (lessee)' })).closest('tr');
+    if (!row) throw new Error('row missing');
+    expect(within(row).getByText('Moulvibazar')).toBeInTheDocument();
+    expect(within(row).getByText('Not recorded')).toBeInTheDocument();
+
+    await userEvent.click(within(row).getByRole('link', { name: 'Abdul Haque (lessee)' }));
+    const summary = await screen.findByRole('region', { name: 'Party summary' });
+    expect(within(summary).getByText('Individual')).toBeInTheDocument();
+    expect(within(summary).getByText('Moulvibazar')).toBeInTheDocument();
+    // No contact yet.
+    expect(await within(summary).findByText('Not recorded')).toBeInTheDocument();
+    expect(within(summary).getByText('0')).toBeInTheDocument();
   });
 
   it('checks a phone number before sending', async () => {
