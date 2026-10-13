@@ -46,6 +46,34 @@ describe('factories', () => {
     expect(await axeViolations(appRoot)).toEqual([]);
   });
 
+  it('shows each factory’s main estate, and "Not recorded" for a missing licence', async () => {
+    await openAs('manager', '/factories/new');
+    await screen.findByRole('heading', { level: 1, name: 'Add factory' });
+    await userEvent.type(screen.getByRole('textbox', { name: /^Code/ }), 'DEMO-F3');
+    await userEvent.type(screen.getByRole('textbox', { name: /^Name/ }), 'No Licence Factory');
+    await userEvent.click(screen.getByRole('button', { name: 'Create factory' }));
+    await screen.findByRole('heading', { level: 1, name: 'No Licence Factory' });
+
+    await userEvent.click(
+      within(screen.getByRole('navigation', { name: 'Main' })).getByRole('link', { name: 'Factories' }),
+    );
+    const table = await screen.findByRole('table', { name: 'Factories' });
+    const central = (await within(table).findByRole('link', { name: 'Rupai Central Factory' })).closest('tr');
+    const noLicence = within(table).getByRole('link', { name: 'No Licence Factory' }).closest('tr');
+    if (!central || !noLicence) throw new Error('rows missing');
+    expect(await within(central).findByText('DEMO-A · Rupai Hills Tea Estate')).toBeInTheDocument();
+    expect(within(noLicence).getAllByText('Not recorded').length).toBeGreaterThan(0);
+  });
+
+  it('the factory page sums it up: type, main estate, capacity, licence', async () => {
+    await openAs('manager', '/factories/fa1');
+    const summary = await screen.findByRole('region', { name: 'Factory summary' });
+    expect(within(summary).getByText('Own')).toBeInTheDocument();
+    expect(await within(summary).findByText('DEMO-A')).toBeInTheDocument();
+    expect(within(summary).getByText('45,000.000')).toBeInTheDocument();
+    expect(within(summary).getByText('Licence expired')).toBeInTheDocument();
+  });
+
   it('creates a factory with its main estate', async () => {
     const router = await openAs('manager', '/factories/new');
     await screen.findByRole('heading', { level: 1, name: 'Add factory' });

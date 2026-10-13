@@ -55,6 +55,24 @@ describe('estates', () => {
     expect(await axeViolations(appRoot)).toEqual([]);
   });
 
+  it('shows "Not recorded" for a missing total area, and the area its fields add up to', async () => {
+    await openAs('manager', '/estates');
+    const table = await screen.findByRole('table', { name: 'Estates' });
+    const row = (await within(table).findByRole('link', { name: 'Rupai Hills Tea Estate' })).closest('tr');
+    if (!row) throw new Error('no row');
+    expect(within(row).getByText('Not recorded')).toBeInTheDocument();
+    // f1 12.500 + f2 8.000 + f3 10.250, added as decimals.
+    expect(await within(row).findByText('30.750 ha')).toBeInTheDocument();
+  });
+
+  it('the estate page sums up its fields and divisions', async () => {
+    await openAs('manager', '/estates/e1');
+    const summary = await screen.findByRole('region', { name: 'Estate summary' });
+    expect(await within(summary).findByText('30.750')).toBeInTheDocument();
+    expect(within(summary).getByText('28.750')).toBeInTheDocument();
+    expect(within(summary).getByText('Not recorded')).toBeInTheDocument();
+  });
+
   it('a scoped user sees which estates the list is limited to', async () => {
     setMockEstateScope(['e1']);
     await openAs('manager', '/estates');
@@ -144,6 +162,16 @@ describe('divisions and sections', () => {
 });
 
 describe('fields', () => {
+  it('shows where each field sits: its section and division by name', async () => {
+    await openAs('manager', '/fields');
+    const table = await screen.findByRole('table', { name: 'Fields' });
+    const row = (await within(table).findByRole('link', { name: 'A-N1-1' })).closest('tr');
+    if (!row) throw new Error('no row');
+    expect(await within(row).findByText('N1 · North 1')).toBeInTheDocument();
+    expect(within(row).getByText('N · North')).toBeInTheDocument();
+    expect(within(row).getByText('11.750 ha')).toBeInTheDocument();
+  });
+
   it('filters fields by estate', async () => {
     await openAs('manager', '/fields');
     const table = await screen.findByRole('table', { name: 'Fields' });

@@ -13,6 +13,7 @@ import { useCreateFactory, useFactory, useUpdateFactory } from '../api/facilitie
 import { useAllEstates } from '../api/hierarchy';
 import { type Factory, FACTORY_TYPES, NODE_CODE } from '../api/schemas';
 import { FacilityForm } from '../components/FacilityForm';
+import { FactorySummary } from '../components/FactorySummary';
 
 const blankToNull = (value: string) => (value.trim() === '' ? null : value.trim());
 
@@ -108,6 +109,7 @@ function FactoryEditor({ factory }: { readonly factory: Factory | null }) {
 
   return (
     <FacilityForm
+      summary={factory ? <FactorySummary factory={factory} /> : null}
       path="factories"
       record={factory}
       title={factory ? factory.name : t('factory.newTitle')}

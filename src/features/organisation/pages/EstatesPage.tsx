@@ -14,7 +14,7 @@ import {
   Stack,
 } from '@/ui';
 
-import { useEstatesList } from '../api/hierarchy';
+import { useEstatesList, useFieldTotals } from '../api/hierarchy';
 import { type Estate, STATUSES } from '../api/schemas';
 import { NodeStatusBadge } from '../components/NodeLifecycle';
 import { ScopeNotice } from '../components/ScopeNotice';
@@ -28,6 +28,8 @@ export function EstatesPage() {
   const format = useFormat();
   const canCreate = usePermission('estate.create');
   const list = useEstatesList();
+  // What each estate's fields cover: known even when the estate's own total area was never entered.
+  const totals = useFieldTotals();
   const { table } = list;
 
   const columns: DataColumn<Estate>[] = [
@@ -53,7 +55,32 @@ export function EstatesPage() {
       id: 'total_area',
       header: t('estates.columns.area'),
       isNumeric: true,
-      cell: (estate) => (estate.total_area ? format.quantity(estate.total_area, 'ha') : ''),
+      align: 'center',
+      cell: (estate) =>
+        estate.total_area ? (
+          format.quantity(estate.total_area, 'ha')
+        ) : (
+          <span className="text-fg-subtle">{t('estates.notRecorded')}</span>
+        ),
+    },
+    {
+      id: 'field_area',
+      header: t('estates.columns.fieldArea'),
+      isNumeric: true,
+      align: 'center',
+      cell: (estate) => {
+        const sum = totals.data?.get(estate.id);
+        if (totals.isPending) return <span className="text-fg-subtle">…</span>;
+        return sum ? format.quantity(sum.gross, 'ha') : format.quantity('0', 'ha');
+      },
+    },
+    {
+      id: 'field_count',
+      header: t('estates.columns.fields'),
+      isNumeric: true,
+      align: 'center',
+      canHide: true,
+      cell: (estate) => (totals.isPending ? '…' : format.number(totals.data?.get(estate.id)?.count ?? 0)),
     },
     {
       id: 'ownership_type',

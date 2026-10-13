@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 
 import { api, useIdempotencyKey } from '@/lib/api';
+import { Dec } from '@/lib/money';
 import { cachePolicy, createQueryKeys, useApiMutation, usePagedList } from '@/lib/query';
 
 import {
@@ -328,5 +329,104 @@ export function useReassignField(field: Field) {
       ).data,
     invalidates: () => [fieldKeys.all],
     conflictSubject: () => field.field_number,
+  });
+}
+
+/** One estate's fields, added up: how many, and their gross and planted area (hectares, decimal strings). */
+export interface FieldTotals {
+  readonly count: number;
+  readonly gross: string;
+  readonly planted: string;
+}
+
+/**
+ * Field totals per estate, from the fields themselves (GET /fields, every page): the area the estate's fields
+ * cover, which is known even when the estate's own total_area was never entered. Pass an estate id to load only
+ * that estate's fields. Sums use decimal arithmetic, never floats.
+ */
+export function useFieldTotals(estateId?: string) {
+  return useQuery({
+    ...cachePolicy('master'),
+    queryKey: fieldKeys.list(`totals:${estateId ?? 'all'}`),
+    queryFn: async ({ signal }) => {
+      const sums = new Map<
+        string,
+        { count: number; gross: InstanceType<typeof Dec>; planted: InstanceType<typeof Dec> }
+      >();
+      for (let page = 1; ; page += 1) {
+        const response = await api.get('/fields', {
+          query: { per_page: 200, page, ...(estateId ? { 'filter[estate_id]': estateId } : {}) },
+          schema: z.array(FieldSchema),
+          signal,
+        });
+        for (const field of response.data) {
+          const sum = sums.get(field.estate_id) ?? { count: 0, gross: new Dec(0), planted: new Dec(0) };
+          sums.set(field.estate_id, {
+            count: sum.count + 1,
+            gross: sum.gross.plus(field.gross_area),
+            planted: sum.planted.plus(field.planted_area ?? '0'),
+          });
+        }
+        if (page >= (response.meta?.pagination?.last_page ?? page)) break;
+      }
+      return new Map<string, FieldTotals>(
+        [...sums].map(([id, sum]) => [
+          id,
+          { count: sum.count, gross: sum.gross.toFixed(3), planted: sum.planted.toFixed(3) },
+        ]),
+      );
+    },
+  });
+}
+
+/** Division and section labels ("NORTH · North Division") by id, for the estates given. */
+export interface HierarchyNames {
+  readonly divisions: ReadonlyMap<string, string>;
+  readonly sections: ReadonlyMap<string, string>;
+}
+
+/**
+ * Names of the divisions and sections of these estates, for lists that only carry ids (the fields list). The API
+ * has no flat list of sections, so this reads each estate's divisions and each division's sections once, and keeps
+ * them in the master-data cache.
+ */
+export function useHierarchyNames(estateIds: readonly string[]) {
+  const ids = [...new Set(estateIds)].sort();
+  return useQuery({
+    ...cachePolicy('master'),
+    queryKey: sectionKeys.list(`names:${ids.join(',')}`),
+    enabled: ids.length > 0,
+    queryFn: async ({ signal }) => {
+      const label = (node: { code: string; name: string }) => `${node.code} · ${node.name}`;
+      const divisionLists = await Promise.all(
+        ids.map(
+          async (id) =>
+            (
+              await api.get(`/estates/${id}/divisions`, {
+                query: { per_page: 200 },
+                schema: z.array(DivisionSchema),
+                signal,
+              })
+            ).data,
+        ),
+      );
+      const divisions = divisionLists.flat();
+      const sectionLists = await Promise.all(
+        divisions.map(
+          async (division) =>
+            (
+              await api.get(`/divisions/${division.id}/sections`, {
+                query: { per_page: 200 },
+                schema: z.array(SectionSchema),
+                signal,
+              })
+            ).data,
+        ),
+      );
+      return {
+        divisions: new Map(divisions.map((d) => [d.id, label(d)])),
+        sections: new Map(sectionLists.flat().map((s) => [s.id, label(s)])),
+      } satisfies HierarchyNames;
+    },
   });
 }
