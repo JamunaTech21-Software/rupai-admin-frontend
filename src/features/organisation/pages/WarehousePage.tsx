@@ -13,6 +13,7 @@ import { useCreateWarehouse, useUpdateWarehouse, useWarehouse } from '../api/fac
 import { NODE_CODE, type Warehouse, WAREHOUSE_TYPES } from '../api/schemas';
 import { ContactsPanel } from '../components/ContactsPanel';
 import { FacilityForm } from '../components/FacilityForm';
+import { WarehouseSummary } from '../components/WarehouseSummary';
 
 const blankToNull = (value: string) => (value.trim() === '' ? null : value.trim());
 
@@ -114,6 +115,7 @@ function WarehouseEditor({ warehouse }: { readonly warehouse: Warehouse | null }
     <FacilityForm
       path="warehouses"
       record={warehouse}
+      summary={warehouse ? <WarehouseSummary warehouse={warehouse} /> : null}
       title={warehouse ? warehouse.name : t('warehouse.newTitle')}
       newIntro={t('warehouse.newIntro')}
       backLabel={t('warehouse.backToList')}

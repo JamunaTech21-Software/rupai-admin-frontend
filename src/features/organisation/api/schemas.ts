@@ -204,3 +204,66 @@ export const ContactSchema = z.object({
   updated_at: z.string().nullable(),
 });
 export type Contact = z.infer<typeof ContactSchema>;
+
+// ---- Calendars (P1.09): seasons, fiscal years, accounting periods ---------------------------------------
+
+export const SEASON_STATES = ['planned', 'active', 'closed'] as const;
+export type SeasonState = (typeof SEASON_STATES)[number];
+export const FISCAL_YEAR_STATES = ['future', 'open', 'closed'] as const;
+export type FiscalYearState = (typeof FISCAL_YEAR_STATES)[number];
+/** soft_closed, closed and reopened are reached with period close (P10.02). */
+export const PERIOD_STATES = ['future', 'open', 'soft_closed', 'closed', 'reopened'] as const;
+export type PeriodState = (typeof PERIOD_STATES)[number];
+
+export const SeasonSchema = z.object({
+  id: z.string(),
+  estate_id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  start_date: z.string(),
+  end_date: z.string(),
+  state: z.enum(SEASON_STATES),
+  closed_at: z.string().nullable(),
+  closed_by: z.string().nullable(),
+  version: z.number(),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
+});
+export type Season = z.infer<typeof SeasonSchema>;
+
+export const FiscalYearSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  start_date: z.string(),
+  end_date: z.string(),
+  state: z.enum(FISCAL_YEAR_STATES),
+  /** 0 until the periods are generated, then 13. */
+  period_count: z.number(),
+  closed_at: z.string().nullable(),
+  closed_by: z.string().nullable(),
+  version: z.number(),
+  created_at: z.string(),
+  updated_at: z.string().nullable(),
+});
+export type FiscalYear = z.infer<typeof FiscalYearSchema>;
+
+export const AccountingPeriodSchema = z.object({
+  id: z.string(),
+  fiscal_year_id: z.string(),
+  period_number: z.number(),
+  name: z.string(),
+  start_date: z.string(),
+  end_date: z.string(),
+  state: z.enum(PERIOD_STATES),
+  /** Period 13: year-end adjustments (the last day of the year). */
+  is_adjustment: z.boolean(),
+  closed_at: z.string().nullable(),
+  closed_by: z.string().nullable(),
+  reopened_at: z.string().nullable(),
+  reopened_by: z.string().nullable(),
+  reopen_reason: z.string().nullable(),
+  version: z.number(),
+  updated_at: z.string().nullable(),
+});
+export type AccountingPeriod = z.infer<typeof AccountingPeriodSchema>;

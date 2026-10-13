@@ -14,6 +14,7 @@ export function WarehousesPage() {
   const format = useFormat();
   const canCreate = usePermission('warehouse.create');
   const list = useWarehousesList();
+  const notRecorded = <span className="text-fg-subtle">{t('estates.notRecorded')}</span>;
 
   const columns: DataColumn<Warehouse>[] = [
     {
@@ -37,25 +38,40 @@ export function WarehousesPage() {
       id: 'location',
       header: t('warehouses.columns.location'),
       canHide: true,
-      cell: (row) => row.location ?? '',
+      cell: (row) => row.location ?? notRecorded,
     },
     {
       id: 'capacity_kg',
       header: t('warehouses.columns.capacity'),
       isNumeric: true,
+      align: 'center',
       canHide: true,
-      cell: (row) => (row.capacity_kg ? format.quantity(row.capacity_kg) : ''),
+      cell: (row) =>
+        row.capacity_kg ? (
+          <span className="whitespace-nowrap">{format.quantity(row.capacity_kg)}</span>
+        ) : (
+          notRecorded
+        ),
     },
-    { id: 'phone', header: t('warehouses.columns.phone'), canHide: true, cell: (row) => row.phone ?? '' },
+    {
+      // The primary contact's phone (empty until the warehouse has a contact with one).
+      id: 'phone',
+      header: t('warehouses.columns.phone'),
+      align: 'center',
+      canHide: true,
+      cell: (row) => (row.phone ? <span className="whitespace-nowrap">{row.phone}</span> : notRecorded),
+    },
     {
       id: 'licence_expiry',
       header: t('warehouses.columns.licence'),
+      align: 'center',
       canHide: true,
       cell: (row) => <LicenceExpiry expiry={row.licence_expiry} />,
     },
     {
       id: 'status',
       header: t('warehouses.columns.status'),
+      align: 'center',
       cell: (row) => <NodeStatusBadge status={row.status} />,
     },
   ];

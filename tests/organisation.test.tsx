@@ -227,11 +227,20 @@ describe('organisation', () => {
   it('edits the organisation settings', async () => {
     await openAs('manager', '/organisation');
     await screen.findByRole('heading', { level: 1, name: 'Organisation' });
+    const summary = screen.getByRole('region', { name: 'Organisation summary' });
+    expect(within(summary).getByText('RUPAI')).toBeInTheDocument();
+    expect(within(summary).getByText('Not recorded')).toBeInTheDocument();
+    expect(within(summary).getByText('July')).toBeInTheDocument();
+    expect(within(summary).getByText('Active')).toBeInTheDocument();
     const shortName = screen.getByRole('textbox', { name: /^Short name/ });
     await userEvent.clear(shortName);
     await userEvent.type(shortName, 'RTC');
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(await screen.findByText('Organisation saved')).toBeInTheDocument();
+    // The summary follows the save.
+    expect(
+      await within(screen.getByRole('region', { name: 'Organisation summary' })).findByText('RTC'),
+    ).toBeInTheDocument();
     expect(await axeViolations(appRoot)).toEqual([]);
   });
 

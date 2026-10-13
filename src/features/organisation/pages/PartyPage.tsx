@@ -13,6 +13,7 @@ import { useCreateParty, useParty, useUpdateParty } from '../api/facilities';
 import { NODE_CODE, type Party, PARTY_TYPES, PHONE } from '../api/schemas';
 import { ContactsPanel } from '../components/ContactsPanel';
 import { FacilityForm } from '../components/FacilityForm';
+import { PartySummary } from '../components/PartySummary';
 
 const blankToNull = (value: string) => (value.trim() === '' ? null : value.trim());
 
@@ -114,6 +115,7 @@ function PartyEditor({ party }: { readonly party: Party | null }) {
     <FacilityForm
       path="parties"
       record={party}
+      summary={party ? <PartySummary party={party} /> : null}
       title={party ? party.name : t('party.newTitle')}
       newIntro={t('party.newIntro')}
       backLabel={t('party.backToList')}

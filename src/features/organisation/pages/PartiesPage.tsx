@@ -12,6 +12,7 @@ export function PartiesPage() {
   const { t } = useTranslation('org');
   const canCreate = usePermission('land.create');
   const list = usePartiesList();
+  const notRecorded = <span className="text-fg-subtle">{t('estates.notRecorded')}</span>;
 
   const columns: DataColumn<Party>[] = [
     {
@@ -31,12 +32,19 @@ export function PartiesPage() {
       id: 'district',
       header: t('parties.columns.district'),
       canHide: true,
-      cell: (row) => row.district ?? '',
+      cell: (row) => row.district ?? notRecorded,
     },
-    { id: 'phone', header: t('parties.columns.phone'), canHide: true, cell: (row) => row.phone ?? '' },
+    {
+      id: 'phone',
+      header: t('parties.columns.phone'),
+      align: 'center',
+      canHide: true,
+      cell: (row) => (row.phone ? <span className="whitespace-nowrap">{row.phone}</span> : notRecorded),
+    },
     {
       id: 'status',
       header: t('parties.columns.status'),
+      align: 'center',
       cell: (row) => <NodeStatusBadge status={row.status} />,
     },
   ];

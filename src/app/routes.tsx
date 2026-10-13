@@ -18,9 +18,13 @@ import {
   factoryRoutes,
   fieldCreateRoutes,
   fieldRoutes,
+  fiscalYearRoutes,
   organisationRoutes,
   partyCreateRoutes,
   partyRoutes,
+  periodRoutes,
+  seasonCreateRoutes,
+  seasonRoutes,
   warehouseCreateRoutes,
   warehouseRoutes,
 } from '@/features/organisation';
@@ -88,6 +92,13 @@ export const routes: RouteObject[] = [
               { element: <RequirePermission permission="warehouse.view" />, children: warehouseRoutes },
               { element: <RequirePermission permission="land.create" />, children: partyCreateRoutes },
               { element: <RequirePermission permission="land.view" />, children: partyRoutes },
+              { element: <RequirePermission permission="season.create" />, children: seasonCreateRoutes },
+              { element: <RequirePermission permission="season.view" />, children: seasonRoutes },
+              { element: <RequirePermission permission="fiscal_year.view" />, children: fiscalYearRoutes },
+              {
+                element: <RequirePermission permission="accounting_period.view" />,
+                children: periodRoutes,
+              },
               ...designSystemRoutes,
               {
                 element: <RequirePermission permission="user.view" />,

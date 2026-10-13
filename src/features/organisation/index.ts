@@ -45,5 +45,21 @@ export const partyCreateRoutes: RouteObject[] = [
   { path: 'parties/new', lazy: () => import('./pages/PartyPage') },
 ];
 
+/** Calendars (P1.09): seasons per estate; fiscal years and accounting periods for the organisation. */
+export const seasonRoutes: RouteObject[] = [
+  { path: 'seasons', lazy: () => import('./pages/SeasonsPage') },
+  { path: 'seasons/:id', lazy: () => import('./pages/SeasonPage') },
+];
+export const seasonCreateRoutes: RouteObject[] = [
+  { path: 'seasons/new', lazy: () => import('./pages/SeasonPage') },
+];
+export const fiscalYearRoutes: RouteObject[] = [
+  { path: 'fiscal-years', lazy: () => import('./pages/FiscalYearsPage') },
+  { path: 'fiscal-years/:id', lazy: () => import('./pages/FiscalYearPage') },
+];
+export const periodRoutes: RouteObject[] = [
+  { path: 'accounting-periods', lazy: () => import('./pages/PeriodsPage') },
+];
+
 /** MSW mocks for VITE_MOCK_API=organisation (development only; loaded on demand). */
 export const loadOrganisationMocks = () => import('./api/mocks');

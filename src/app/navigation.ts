@@ -17,6 +17,9 @@ interface AppNavItem {
     | 'factories'
     | 'warehouses'
     | 'parties'
+    | 'seasons'
+    | 'fiscalYears'
+    | 'periods'
     | 'users'
     | 'roles'
     | 'accessReview'
@@ -29,7 +32,7 @@ interface AppNavItem {
 }
 
 interface AppNavSection {
-  readonly id: 'main' | 'organisation' | 'administration' | 'system';
+  readonly id: 'main' | 'organisation' | 'calendars' | 'administration' | 'system';
   readonly items: readonly AppNavItem[];
 }
 
@@ -61,6 +64,26 @@ export const NAVIGATION: readonly AppNavSection[] = [
         href: '/organisation',
         icon: 'settings',
         permission: 'organisation.view',
+      },
+    ],
+  },
+  {
+    id: 'calendars',
+    items: [
+      { id: 'seasons', labelKey: 'seasons', href: '/seasons', icon: 'calendar', permission: 'season.view' },
+      {
+        id: 'fiscal-years',
+        labelKey: 'fiscalYears',
+        href: '/fiscal-years',
+        icon: 'wallet',
+        permission: 'fiscal_year.view',
+      },
+      {
+        id: 'accounting-periods',
+        labelKey: 'periods',
+        href: '/accounting-periods',
+        icon: 'clock',
+        permission: 'accounting_period.view',
       },
     ],
   },

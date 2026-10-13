@@ -1,13 +1,14 @@
 import { useFormat, useTranslation } from '@/lib/i18n';
-import { Alert, StatCard } from '@/ui';
+import { StatCard } from '@/ui';
 
 import { useAllEstates } from '../api/hierarchy';
 import { type Factory } from '../api/schemas';
-import { licenceState } from '../licence';
+
+import { LicenceWarning } from './LicenceWarning';
 
 /**
  * The factory at a glance: its type, main estate, daily capacity and licence expiry, with a warning under the
- * cards when the licence has expired or expires within 30 days (a factory cannot operate without one).
+ * cards when the licence has expired or expires within 30 days.
  */
 export function FactorySummary({ factory }: { readonly factory: Factory }) {
   const { t } = useTranslation('org');
@@ -15,11 +16,10 @@ export function FactorySummary({ factory }: { readonly factory: Factory }) {
   const estates = useAllEstates();
   const estate = estates.data?.find((e) => e.id === factory.primary_estate_id);
   const notRecorded = t('estates.notRecorded');
-  const licence = licenceState(factory.licence_expiry);
 
   return (
     <section aria-label={t('factory.summary')} className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label={t('factory.type')} value={t(`factoryType.${factory.factory_type}`)} />
         <StatCard
           label={t('factory.primaryEstate')}
@@ -35,16 +35,7 @@ export function FactorySummary({ factory }: { readonly factory: Factory }) {
           value={factory.licence_expiry ? format.date(factory.licence_expiry) : notRecorded}
         />
       </div>
-      {factory.licence_expiry && (licence === 'expired' || licence === 'expiring') ? (
-        <Alert
-          tone={licence === 'expired' ? 'danger' : 'warning'}
-          title={licence === 'expired' ? t('licence.expired') : t('licence.expiring')}
-        >
-          {t(licence === 'expired' ? 'licence.expiredBody' : 'licence.expiringBody', {
-            date: format.date(factory.licence_expiry),
-          })}
-        </Alert>
-      ) : null}
+      <LicenceWarning expiry={factory.licence_expiry} />
     </section>
   );
 }
