@@ -8,6 +8,7 @@ import {
   adminUserCreateRoutes,
   adminUserRoutes,
 } from '@/features/admin';
+import { numberingRoutes, settingsRoutes } from '@/features/configuration';
 import { accountRoutes, changePasswordRoute, publicAuthRoutes } from '@/features/auth';
 import { designSystemRoutes } from '@/features/design-system';
 import { homeRoutes } from '@/features/home';
@@ -29,6 +30,7 @@ import {
   warehouseRoutes,
 } from '@/features/organisation';
 
+import { masterTypeRoutes, mastersRoutes, teaGradeRoutes, uomRoutes } from '@/features/reference';
 import { ForbiddenPage, NotFoundPage, RouteError, ServerErrorPage } from './errors';
 import { RequireAuth, RequirePermission } from './guards';
 import { ApplicationLayout, FocusedLayout, PrintLayout, PublicLayout } from './layouts';
@@ -99,6 +101,11 @@ export const routes: RouteObject[] = [
                 element: <RequirePermission permission="accounting_period.view" />,
                 children: periodRoutes,
               },
+              { element: <RequirePermission permission="lookup.view" />, children: mastersRoutes },
+              // Each master has its own view permission: the page checks it.
+              ...masterTypeRoutes,
+              { element: <RequirePermission permission="uom.view" />, children: uomRoutes },
+              { element: <RequirePermission permission="tea_grade.view" />, children: teaGradeRoutes },
               ...designSystemRoutes,
               {
                 element: <RequirePermission permission="user.view" />,
@@ -115,6 +122,8 @@ export const routes: RouteObject[] = [
                 element: <RequirePermission permission="audit.view" />,
                 children: adminAuditRoutes,
               },
+              { element: <RequirePermission permission="system.view" />, children: numberingRoutes },
+              { element: <RequirePermission permission="system.view" />, children: settingsRoutes },
               { path: 'forbidden', Component: ForbiddenPage },
               { path: 'error', Component: ServerErrorPage },
               { path: '*', Component: NotFoundPage },
