@@ -1,9 +1,12 @@
-import { useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo } from 'react';
 import { Outlet, useHref, useNavigate } from 'react-router';
 
 import { ConflictDialogHost } from '@/features/system';
-import { AuthProvider } from '@/lib/auth';
+import { type ApiClient } from '@/lib/api';
+import { AuthProvider, hasPermission, type Me } from '@/lib/auth';
 import { useLanguage, useTranslation } from '@/lib/i18n';
+import { primeLookups } from '@/lib/lookups';
 import { QueryProvider } from '@/lib/query';
 import { UiProvider } from '@/ui';
 
@@ -28,6 +31,18 @@ function UiBridge({ children }: { readonly children: React.ReactNode }) {
   );
 }
 
+/** The session, with the reference lists (P1.10) loaded before the app renders for those who may read them. */
+function Session({ children }: { readonly children: React.ReactNode }) {
+  const queryClient = useQueryClient();
+  const loadLookups = useCallback(
+    async (client: ApiClient, me: Me) => {
+      if (hasPermission(me.permissions, 'lookup.view')) await primeLookups(queryClient, client);
+    },
+    [queryClient],
+  );
+  return <AuthProvider loadLookups={loadLookups}>{children}</AuthProvider>;
+}
+
 /**
  * The root of every route: data layer, component library and session. The session starts here (refresh →
  * /auth/me → lookups); the routes below decide what a signed-out user may see.
@@ -36,10 +51,10 @@ export function RootLayout() {
   return (
     <QueryProvider>
       <UiBridge>
-        <AuthProvider>
+        <Session>
           <Outlet />
           <ConflictDialogHost />
-        </AuthProvider>
+        </Session>
       </UiBridge>
     </QueryProvider>
   );

@@ -6,6 +6,7 @@ import { usePermission } from '@/lib/auth';
 import { errorBehaviour, isApiError } from '@/lib/errors';
 import { applyServerErrors, useFormField, useZodForm } from '@/lib/forms';
 import { useTranslation } from '@/lib/i18n';
+import { lookupLabel, lookupText, useActiveLookups } from '@/lib/lookups';
 import { Alert, Button, Card, Input, PageHeader, Select, Stack, toast } from '@/ui';
 
 import { type Organisation, PHONE } from '../api/schemas';
@@ -33,6 +34,11 @@ function OrganisationForm({ organisation }: { readonly organisation: Organisatio
   const canViewYears = usePermission('fiscal_year.view');
   const fiscalYears = useAllFiscalYears(canViewYears);
   const isStartMonthFixed = (fiscalYears.data?.length ?? 0) > 0;
+  // The country is chosen from the reference list; the base currency is fixed for the organisation.
+  const canReadLookups = usePermission('lookup.view');
+  const countries = useActiveLookups('country', canReadLookups);
+  const currencies = useActiveLookups('currency', canReadLookups);
+  const baseCurrency = currencies.data?.find((c) => c.id === organisation.base_currency_id);
   const [refusal, setRefusal] = useState<unknown>(null);
 
   const required = (field: string) => t('validation.required', { field: field.toLowerCase() });
@@ -55,6 +61,7 @@ function OrganisationForm({ organisation }: { readonly organisation: Organisatio
     address_line2: optional(200),
     city: optional(100),
     postal_code: optional(20),
+    country_id: z.string().min(1, t('validation.choose', { field: t('organisation.country').toLowerCase() })),
     phone: z.union([z.literal(''), z.string().trim().regex(PHONE, t('validation.phone'))]),
     email: z.union([z.literal(''), z.email(t('validation.email')).max(150)]),
     website: optional(150),
@@ -71,6 +78,7 @@ function OrganisationForm({ organisation }: { readonly organisation: Organisatio
       address_line2: organisation.address_line2 ?? '',
       city: organisation.city ?? '',
       postal_code: organisation.postal_code ?? '',
+      country_id: organisation.country_id ?? '',
       phone: organisation.phone ?? '',
       email: organisation.email ?? '',
       website: organisation.website ?? '',
@@ -106,6 +114,7 @@ function OrganisationForm({ organisation }: { readonly organisation: Organisatio
         address_line2: blankToNull(values.address_line2),
         city: blankToNull(values.city),
         postal_code: blankToNull(values.postal_code),
+        country_id: values.country_id,
         phone: blankToNull(values.phone),
         email: blankToNull(values.email),
         website: blankToNull(values.website),
@@ -122,6 +131,15 @@ function OrganisationForm({ organisation }: { readonly organisation: Organisatio
   });
 
   const fiscal = useFormField(form.control, 'fiscal_year_start_month');
+  const country = useFormField(form.control, 'country_id');
+  // A country that is no longer active, or lists the user may not read: keep the stored one selectable.
+  const countryOptions = (countries.data ?? []).map((c) => ({ id: c.id, label: lookupText(c, 'name') }));
+  if (country.value !== '' && !countryOptions.some((option) => option.id === country.value)) {
+    countryOptions.unshift({
+      id: country.value,
+      label: countries.isPending && canReadLookups ? '…' : '#' + country.value,
+    });
+  }
 
   return (
     <Stack gap={6}>
@@ -167,6 +185,17 @@ function OrganisationForm({ organisation }: { readonly organisation: Organisatio
               autoComplete="postal-code"
               {...field('postal_code')}
             />
+            <Select
+              label={t('organisation.country')}
+              isRequired
+              isDisabled={!canEdit}
+              value={country.value === '' ? null : country.value}
+              options={countryOptions}
+              onChange={(value) => {
+                if (value) country.onChange(value);
+              }}
+              {...(country.error ? { error: country.error } : {})}
+            />
           </div>
         </Card>
         <Card title={t('organisation.contact')} headingLevel={2}>
@@ -177,22 +206,37 @@ function OrganisationForm({ organisation }: { readonly organisation: Organisatio
           </div>
         </Card>
         <Card title={t('organisation.finance')} headingLevel={2}>
-          <Select
-            label={t('organisation.fiscalYearStart')}
-            hint={
-              isStartMonthFixed ? t('organisation.fiscalYearFixed') : t('organisation.fiscalYearStartHint')
-            }
-            className="md:w-64"
-            isDisabled={!canEdit || isStartMonthFixed}
-            value={fiscal.value}
-            onChange={(value) => {
-              if (value) fiscal.onChange(value);
-            }}
-            options={MONTHS.map((month) => ({
-              id: String(month),
-              label: t(`months.m${String(month)}` as 'months.m1'),
-            }))}
-          />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Select
+              label={t('organisation.fiscalYearStart')}
+              hint={
+                isStartMonthFixed ? t('organisation.fiscalYearFixed') : t('organisation.fiscalYearStartHint')
+              }
+              isDisabled={!canEdit || isStartMonthFixed}
+              value={fiscal.value}
+              onChange={(value) => {
+                if (value) fiscal.onChange(value);
+              }}
+              options={MONTHS.map((month) => ({
+                id: String(month),
+                label: t(`months.m${String(month)}` as 'months.m1'),
+              }))}
+            />
+            <Input
+              label={t('organisation.baseCurrency')}
+              hint={t('organisation.baseCurrencyHint')}
+              isReadOnly
+              value={
+                baseCurrency
+                  ? lookupLabel(baseCurrency)
+                  : organisation.base_currency_id === null
+                    ? t('estates.notRecorded')
+                    : currencies.isPending && canReadLookups
+                      ? '…'
+                      : '#' + organisation.base_currency_id
+              }
+            />
+          </div>
         </Card>
         <Alert tone="info">{t('organisation.later')}</Alert>
         {canEdit ? (

@@ -56,7 +56,7 @@ export function useOrganisation() {
 
 export type OrganisationInput = Omit<
   Organisation,
-  'id' | 'country_id' | 'logo_path' | 'base_currency_id' | 'status' | 'version' | 'updated_at'
+  'id' | 'logo_path' | 'base_currency_id' | 'status' | 'version' | 'updated_at'
 >;
 
 export function useUpdateOrganisation(organisation: Organisation) {

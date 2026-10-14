@@ -130,9 +130,18 @@ describe('permissions', () => {
     expect(admin.find((s) => s.id === 'administration')?.items.map((i) => i.id)).toEqual([
       'users',
       'roles',
+      'access-review',
       'audit',
+      'numbering',
+      'settings',
     ]);
     expect(titleFor(admin, '/admin/users/42')).toBe('users');
     expect(titleFor(admin, '/')).toBe('dashboard');
+    expect(admin.find((s) => s.id === 'reference')?.items.map((i) => i.id)).toEqual([
+      'masters',
+      'uoms',
+      'tea-grades',
+    ]);
+    expect(titleFor(admin, '/masters/department')).toBe('masters');
   });
 });

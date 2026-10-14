@@ -12,16 +12,16 @@ import {
   signOutEverywhere as apiSignOutEverywhere,
 } from '../api';
 
-import { AuthContext, type AuthContextValue, type AuthState, MeSchema } from './me';
+import { AuthContext, type AuthContextValue, type AuthState, type Me, MeSchema } from './me';
 
 export interface AuthProviderProps {
   readonly children: ReactNode;
   readonly client?: ApiClient;
   /**
    * Reference data every screen needs, loaded once after sign-in and before the app renders (Spec P5 §3.5).
-   * Nothing is needed yet; modules add theirs here.
+   * It is given who signed in, so it can skip what they may not read. It must not throw.
    */
-  readonly loadLookups?: (client: ApiClient) => Promise<void>;
+  readonly loadLookups?: (client: ApiClient, me: Me) => Promise<void>;
 }
 
 /**
@@ -35,7 +35,7 @@ export function AuthProvider({ children, client = api, loadLookups }: AuthProvid
 
   const loadMe = useCallback(async () => {
     const { data } = await client.get('/auth/me', { schema: MeSchema });
-    await loadLookups?.(client);
+    await loadLookups?.(client, data);
     setState({ status: 'signed-in', me: data });
     return data;
   }, [client, loadLookups]);

@@ -1,7 +1,9 @@
 import { type RequestHandler } from 'msw';
 
 import { loadAdminMocks } from '@/features/admin';
+import { loadConfigurationMocks } from '@/features/configuration';
 import { loadOrganisationMocks } from '@/features/organisation';
+import { loadReferenceMocks } from '@/features/reference';
 import { loadSystemMocks } from '@/features/system';
 import { isFeatureMocked, type MockSetting, mockSetting } from '@/lib/mocks';
 
@@ -16,6 +18,8 @@ const FEATURE_MOCKS: Record<string, () => Promise<{ handlers: RequestHandler[] }
   jobs: () => import('@/lib/mocking/contract').then((m) => ({ handlers: m.jobMocks() })),
   admin: loadAdminMocks,
   organisation: loadOrganisationMocks,
+  reference: loadReferenceMocks,
+  configuration: loadConfigurationMocks,
 };
 
 /**

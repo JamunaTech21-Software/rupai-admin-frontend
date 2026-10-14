@@ -20,10 +20,15 @@ interface AppNavItem {
     | 'seasons'
     | 'fiscalYears'
     | 'periods'
+    | 'masters'
+    | 'uoms'
+    | 'teaGrades'
     | 'users'
     | 'roles'
     | 'accessReview'
     | 'audit'
+    | 'numbering'
+    | 'settings'
     | 'designTokens';
   readonly href: string;
   readonly icon: IconName;
@@ -32,7 +37,7 @@ interface AppNavItem {
 }
 
 interface AppNavSection {
-  readonly id: 'main' | 'organisation' | 'calendars' | 'administration' | 'system';
+  readonly id: 'main' | 'organisation' | 'calendars' | 'reference' | 'administration' | 'system';
   readonly items: readonly AppNavItem[];
 }
 
@@ -88,6 +93,20 @@ export const NAVIGATION: readonly AppNavSection[] = [
     ],
   },
   {
+    id: 'reference',
+    items: [
+      { id: 'masters', labelKey: 'masters', href: '/masters', icon: 'folderOpen', permission: 'lookup.view' },
+      { id: 'uoms', labelKey: 'uoms', href: '/uoms', icon: 'ruler', permission: 'uom.view' },
+      {
+        id: 'tea-grades',
+        labelKey: 'teaGrades',
+        href: '/tea-grades',
+        icon: 'tag',
+        permission: 'tea_grade.view',
+      },
+    ],
+  },
+  {
     id: 'administration',
     items: [
       { id: 'users', labelKey: 'users', href: '/admin/users', icon: 'users', permission: 'user.view' },
@@ -100,6 +119,20 @@ export const NAVIGATION: readonly AppNavSection[] = [
         permission: 'user.view',
       },
       { id: 'audit', labelKey: 'audit', href: '/admin/audit', icon: 'clipboard', permission: 'audit.view' },
+      {
+        id: 'numbering',
+        labelKey: 'numbering',
+        href: '/admin/numbering',
+        icon: 'hash',
+        permission: 'system.view',
+      },
+      {
+        id: 'settings',
+        labelKey: 'settings',
+        href: '/admin/settings',
+        icon: 'sliders',
+        permission: 'system.view',
+      },
     ],
   },
   {
