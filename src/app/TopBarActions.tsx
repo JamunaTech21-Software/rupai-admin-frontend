@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router';
 
 import { useApprovalsWaiting } from '@/features/approvals';
 import { RunningJobs } from '@/features/jobs';
+import { NotificationBell } from '@/features/notifications';
 import { useAuth, useEstateContext, useMe } from '@/lib/auth';
 import { todayIn } from '@/lib/dates';
 import { currentLanguage, setLanguage, useFormat, useTranslation } from '@/lib/i18n';
@@ -105,7 +106,7 @@ export function TopBarActions() {
       <EstateSelector />
       <Today />
       <Approvals />
-      <IconButton icon="bell" variant="ghost" label={t('notifications')} />
+      <NotificationBell />
       <LanguageSwitch />
       <UserMenu
         name={me.user.username}

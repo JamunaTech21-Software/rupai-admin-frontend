@@ -150,7 +150,7 @@ describe('estate profile', () => {
     await userEvent.type(within(basic).getByRole('textbox', { name: 'Website' }), 'rupai.example');
     const managers = await card('Manager / In-charge Information');
     const assistant = within(managers).getByRole('group', { name: 'Assistant Manager' });
-    await userEvent.type(within(assistant).getByRole('textbox', { name: 'Designation' }), 'Assistant');
+    await userEvent.type(within(assistant).getByRole('textbox', { name: 'Mobile' }), '+8801711000000');
 
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText('Enter both latitude and longitude, or neither.')).toBeInTheDocument();

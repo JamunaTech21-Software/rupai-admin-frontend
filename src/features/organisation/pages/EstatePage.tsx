@@ -15,7 +15,6 @@ import {
   Button,
   Card,
   Checkbox,
-  CheckboxGroup,
   Input,
   LazyGeoMap,
   NumberInput,
@@ -388,7 +387,7 @@ function EstateProfile({
 
   const basic = (
     <Card title={t('profile.basic')} headingLevel={2}>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 md:grid-cols-3">
         <Input
           label={t('estate.name')}
           placeholder={t('profile.placeholders.name')}
@@ -506,7 +505,7 @@ function EstateProfile({
       {isNew ? (
         <p className="text-sm text-fg-muted">{t('profile.managersNew')}</p>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {KEY_PEOPLE.map((role) => (
             <PersonFields key={role} role={role} bind={personBind[role]} isReadOnly={!canEdit} />
           ))}
@@ -515,36 +514,57 @@ function EstateProfile({
     </Card>
   );
 
+  const toggleAmenity = (id: string, on: boolean) => {
+    const current = bind.amenity_ids.value;
+    bind.amenity_ids.onChange(
+      on ? [...current.filter((value) => value !== id), id] : current.filter((value) => value !== id),
+    );
+  };
+
   const facilities = (
     <Card title={t('profile.facilities')} headingLevel={2}>
-      <div className="flex flex-col gap-4">
-        {estate ? (
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_14rem]">
+        <div
+          role="group"
+          aria-label={t('profile.facilities')}
+          className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3"
+        >
+          {/* The factory is ticked by the factory register, not by hand. */}
           <Checkbox isSelected={hasFactory} isDisabled>
-            <span className="flex flex-col">
-              <span>{t('profile.factory')}</span>
-              <span className="text-xs text-fg-muted">{t('profile.factoryHint')}</span>
-            </span>
+            {t('profile.factory')}
           </Checkbox>
-        ) : null}
-        <CheckboxGroup
-          label={t('profile.facilities')}
-          hideLabel
-          isDisabled={!canEdit}
-          options={amenityOptions}
-          value={bind.amenity_ids.value}
-          onChange={bind.amenity_ids.onChange}
-          {...(bind.amenity_ids.error ? { error: bind.amenity_ids.error } : {})}
-          className="[&_[role=group]]:grid [&_[role=group]]:grid-cols-1 [&_[role=group]]:gap-2 sm:[&_[role=group]]:grid-cols-2"
+          {amenityOptions.map((option) => (
+            <Checkbox
+              key={option.id}
+              isSelected={bind.amenity_ids.value.includes(option.id)}
+              isDisabled={!canEdit}
+              onChange={(on) => {
+                toggleAmenity(option.id, on);
+              }}
+            >
+              {option.label}
+            </Checkbox>
+          ))}
+        </div>
+        <Input
+          label={t('profile.otherAmenities')}
+          placeholder={t('profile.placeholders.otherAmenities')}
+          {...bind.other_amenities}
+          {...readOnly}
         />
-        <Input label={t('profile.otherAmenities')} {...bind.other_amenities} {...readOnly} />
       </div>
+      {bind.amenity_ids.error ? (
+        <p role="alert" className="mt-3 text-sm text-danger">
+          {bind.amenity_ids.error}
+        </p>
+      ) : null}
     </Card>
   );
 
   const geo = (
     <Card title={t('profile.geo')} headingLevel={2}>
-      <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
           <Input label={t('profile.latitude')} inputMode="decimal" {...bind.latitude} {...readOnly} />
           <Input label={t('profile.longitude')} inputMode="decimal" {...bind.longitude} {...readOnly} />
         </div>
@@ -570,7 +590,8 @@ function EstateProfile({
       <Textarea
         label={t('profile.description')}
         hideLabel
-        rows={5}
+        placeholder={t('profile.placeholders.description')}
+        rows={8}
         maxLength={4000}
         {...bind.description}
         {...readOnly}
@@ -688,7 +709,7 @@ function EstateProfile({
   );
 }
 
-/** One key person's name, designation, mobile and email. */
+/** One key person: a box with a small caption, and name, mobile and email in a row. */
 function PersonFields({
   role,
   bind,
@@ -700,18 +721,30 @@ function PersonFields({
 }) {
   const { t } = useTranslation('org');
   return (
-    <fieldset className="rounded-md border border-line p-4">
-      <legend className="px-1 text-sm font-semibold text-heading">{t(`profile.roles.${role}`)}</legend>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <fieldset className="rounded-lg border border-line p-4">
+      <legend className="px-1 text-sm text-fg-muted">{t(`profile.roles.${role}`)}</legend>
+      <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-3">
         <Input
           label={t('profile.contactName')}
+          placeholder={t('profile.placeholders.contactName')}
           autoComplete="off"
           {...bind.contact_name}
           isReadOnly={isReadOnly}
         />
-        <Input label={t('profile.designation')} {...bind.designation} isReadOnly={isReadOnly} />
-        <Input label={t('profile.mobile')} type="tel" {...bind.phone} isReadOnly={isReadOnly} />
-        <Input label={t('profile.contactEmail')} type="email" {...bind.email} isReadOnly={isReadOnly} />
+        <Input
+          label={t('profile.mobile')}
+          placeholder={t('profile.placeholders.mobile')}
+          type="tel"
+          {...bind.phone}
+          isReadOnly={isReadOnly}
+        />
+        <Input
+          label={t('profile.contactEmail')}
+          placeholder={t('profile.placeholders.contactEmail')}
+          type="email"
+          {...bind.email}
+          isReadOnly={isReadOnly}
+        />
       </div>
     </fieldset>
   );
