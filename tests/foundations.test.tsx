@@ -147,13 +147,17 @@ describe('permissions', () => {
     expect(children('systemSettings', 'user-administration')).toEqual([
       'users',
       'roles',
+      'delegations',
       'access-review',
       'audit',
     ]);
     expect(children('systemSettings', 'configuration')).toEqual([
       'organisation',
+      'workflows',
       'numbering',
       'settings',
+      'all-approvals',
+      'approval-exceptions',
       'jobs',
       'recurring-jobs',
       'design-tokens',

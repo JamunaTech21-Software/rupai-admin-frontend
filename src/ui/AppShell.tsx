@@ -203,7 +203,7 @@ export function AppShell({
             </AriaModal>
           </ModalOverlay>
         )}
-        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+        <div className="relative flex min-w-0 flex-1 flex-col overflow-y-auto">
           <TopBar menuButton={menuButton} {...(title ? { title } : {})} actions={topBarActions} />
           <main id="main" tabIndex={-1} className="flex-1 p-3 outline-none sm:p-4">
             {children}
