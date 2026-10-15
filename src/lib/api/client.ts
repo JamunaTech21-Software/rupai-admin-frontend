@@ -43,6 +43,7 @@ export interface RequestOptions<TData> {
   readonly method?: Method;
   /** Query string: an `apiQuery` string from useUrlTableState, URLSearchParams, or a plain object. */
   readonly query?: string | URLSearchParams | Readonly<Record<string, QueryValue>>;
+  /** JSON, or FormData for a file upload (multipart). */
   readonly body?: unknown;
   /** The shape of `data`. Checked outside production. */
   readonly schema?: ResponseSchema<TData>;
@@ -185,7 +186,9 @@ export function createApiClient(options: ApiClientOptions) {
     const query = toQueryString(opts.query);
     const url = query ? `${path}?${query}` : path;
     const headers: Record<string, string> = { Accept: 'application/json' };
-    if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
+    // A file upload goes as multipart: the browser writes that Content-Type, with its boundary.
+    const isForm = opts.body instanceof FormData;
+    if (opts.body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
     if (opts.ifMatch !== undefined) headers['If-Match'] = `"${String(opts.ifMatch)}"`;
     if (opts.idempotencyKey) headers['Idempotency-Key'] = opts.idempotencyKey;
     const init: RequestInit = {
@@ -196,7 +199,7 @@ export function createApiClient(options: ApiClientOptions) {
       // record version, which a derived field (e.g. warehouse.phone, from the primary contact) changes without
       // bumping, so a revalidated 304 would show stale data.
       cache: 'no-store',
-      ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
+      ...(opts.body !== undefined ? { body: isForm ? opts.body : JSON.stringify(opts.body) } : {}),
       ...(opts.signal ? { signal: opts.signal } : {}),
     };
 

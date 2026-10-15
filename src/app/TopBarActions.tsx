@@ -1,11 +1,23 @@
 import { useNavigate } from 'react-router';
 
-import { RunningJobs } from '@/features/system';
+import { RunningJobs } from '@/features/jobs';
 import { useAuth, useEstateContext, useMe } from '@/lib/auth';
-import { currentLanguage, setLanguage, useTranslation } from '@/lib/i18n';
-import { Button, ContextSwitcher, IconButton, UserMenu } from '@/ui';
+import { todayIn } from '@/lib/dates';
+import { currentLanguage, setLanguage, useFormat, useTranslation } from '@/lib/i18n';
+import { Button, ContextSwitcher, Icon, IconButton, UserMenu } from '@/ui';
 
 /** Switches between English and Bangla; the button is labelled in the language it switches to. */
+/** Today's business date, in a pill on wide screens (design R.1). */
+function Today() {
+  const format = useFormat();
+  return (
+    <span className="hidden items-center gap-2 rounded-md border border-line bg-canvas px-3 py-1.5 text-sm text-fg-muted xl:flex">
+      <Icon name="calendar" size="sm" className="text-primary" />
+      <span>{format.date(todayIn())}</span>
+    </span>
+  );
+}
+
 export function LanguageSwitch() {
   const { t } = useTranslation('common');
   const next = currentLanguage() === 'bn' ? 'en' : 'bn';
@@ -93,6 +105,7 @@ export function TopBarActions() {
     <>
       <RunningJobs />
       <EstateSelector />
+      <Today />
       <Approvals />
       <IconButton icon="bell" variant="ghost" label={t('notifications')} />
       <LanguageSwitch />

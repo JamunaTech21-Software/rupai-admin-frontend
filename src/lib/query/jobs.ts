@@ -1,34 +1,61 @@
-import { useQuery } from '@tanstack/react-query';
-import { useEffect, useSyncExternalStore } from 'react';
+import { type QueryKey, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import * as z from 'zod/mini';
 
 import { api, type ApiClient } from '../api';
 
 /**
- * Deferred work (Spec P4 §5.3): an endpoint that cannot finish at once answers 202 with a job resource, and
- * the client polls GET /jobs/{id} until it ends. The backend's jobs endpoint is not built yet; this follows the
- * contract and is exercised with MSW until it is.
+ * Deferred work (Spec P4 §5.3, P5 §4.7): an endpoint that cannot finish at once answers 202 with a job resource,
+ * and the client polls GET /jobs/{id} until it ends. States: queued, running, then completed, failed or partial
+ * (some items done, some refused: the result carries the report). A queued job with attempts > 0 is waiting to
+ * retry, with the last error and next_attempt_at.
  */
+export const JOB_STATES = ['queued', 'running', 'completed', 'failed', 'partial'] as const;
+export type JobState = (typeof JOB_STATES)[number];
+
 export const JobSchema = z.object({
   id: z.string(),
-  type: z.optional(z.string()),
-  status: z.enum(['queued', 'running', 'succeeded', 'failed', 'cancelled']),
-  /** 0–100 when the job reports it. */
-  progress: z.optional(z.nullable(z.number())),
-  /** Where the result is, for an export or a report. */
-  result_url: z.optional(z.nullable(z.string())),
-  error: z.optional(z.nullable(z.object({ code: z.string(), message: z.string() }))),
-  created_at: z.optional(z.string()),
-  finished_at: z.optional(z.nullable(z.string())),
+  type: z.string(),
+  /** What it is, for people: "Exporting workers". */
+  label: z.string(),
+  state: z.enum(JOB_STATES),
+  /** total is null until the job knows it. */
+  progress: z.object({ done: z.number(), total: z.nullable(z.number()) }),
+  poll_after_seconds: z.nullable(z.number()),
+  attempts: z.number(),
+  max_attempts: z.number(),
+  next_attempt_at: z.nullable(z.string()),
+  queued_at: z.string(),
+  started_at: z.nullable(z.string()),
+  finished_at: z.nullable(z.string()),
+  /** completed and partial: a summary, a report, or a link to what was produced. */
+  result: z.nullable(z.record(z.string(), z.unknown())),
+  /** failed: why. While waiting to retry: why the last attempt failed. */
+  error: z.nullable(z.object({ code: z.string(), message: z.string() })),
+  requested_by: z.nullable(z.object({ id: z.string(), username: z.string() })),
+  /** Set when the scheduler started it. */
+  schedule: z.nullable(z.string()),
+  expires_at: z.nullable(z.string()),
 });
 export type Job = z.infer<typeof JobSchema>;
 
-const TERMINAL = new Set<Job['status']>(['succeeded', 'failed', 'cancelled']);
-export const isJobFinished = (job: Job | undefined): boolean => job !== undefined && TERMINAL.has(job.status);
+export const isJobFinished = (job: Pick<Job, 'state'> | undefined): boolean =>
+  job !== undefined && job.state !== 'queued' && job.state !== 'running';
 
-/** Polling backoff: 1 s, then ×1.5 per poll, at most 10 s. A long payroll run is not polled every second. */
+/** Queued again after a failed attempt: waiting for next_attempt_at. */
+export const isJobRetrying = (job: Pick<Job, 'state' | 'attempts'>): boolean =>
+  job.state === 'queued' && job.attempts > 0;
+
+/** How far along, 0–100, or null while the total is not known. */
+export function jobPercent(job: Pick<Job, 'progress'>): number | null {
+  const { done, total } = job.progress;
+  if (total === null || total <= 0) return null;
+  return Math.min(100, Math.round((done * 100) / total));
+}
+
+/** Polling backoff (P5 §4.7): 2 s, then ×1.5 per poll, at most 10 s. A long payroll run is not polled every second. */
 export function jobPollDelay(pollsSoFar: number): number {
-  return Math.min(Math.round(1000 * 1.5 ** pollsSoFar), 10_000);
+  return Math.min(Math.round(2000 * 1.5 ** pollsSoFar), 10_000);
 }
 
 // ---- Running jobs, for the top bar ----------------------------------------------------------------------
@@ -53,7 +80,7 @@ function removeRunning(id: string) {
   if (running.some((j) => j.id === id)) setRunning(running.filter((j) => j.id !== id));
 }
 
-/** The jobs still running in this tab, newest last. */
+/** The jobs this tab is following that have not ended yet, newest last. */
 export function useRunningJobs(): readonly RunningJob[] {
   return useSyncExternalStore(
     (onChange) => {
@@ -67,19 +94,33 @@ export function useRunningJobs(): readonly RunningJob[] {
   );
 }
 
+export const jobKeys = {
+  all: ['jobs'] as const,
+  detail: (id: string) => ['jobs', 'detail', id] as const,
+};
+
 /**
- * Follows one job until it ends, polling with backoff, and lists it in the top bar while it runs.
+ * Follows one job until it ends, polling with backoff, and lists it in the top bar while it runs. A job keeps
+ * running when the user leaves the screen; the top bar finds it again from the server's list.
  *
- *   const job = useJob(accepted?.id ?? null, { label: 'Exporting workers' });
- *   if (job.data?.status === 'succeeded') …
+ *   const job = useJob(accepted?.id ?? null, { invalidates: [workerKeys.all] });
+ *   if (job.data?.state === 'completed') …
+ *
+ * `invalidates` are refreshed once when the job ends, so the screens it changed show the new data.
  */
 export function useJob(
   jobId: string | null,
-  options: { readonly label: string; readonly client?: ApiClient },
+  options: {
+    /** Shown in the top bar until the job's own label arrives. */
+    readonly label?: string;
+    readonly client?: ApiClient;
+    readonly invalidates?: readonly QueryKey[];
+  } = {},
 ) {
   const client = options.client ?? api;
+  const queryClient = useQueryClient();
   const query = useQuery({
-    queryKey: ['jobs', 'detail', jobId ?? ''] as const,
+    queryKey: jobKeys.detail(jobId ?? ''),
     enabled: jobId !== null,
     staleTime: 0,
     gcTime: 5 * 60_000,
@@ -90,14 +131,22 @@ export function useJob(
   });
 
   const job = query.data;
-  const label = options.label;
+  const label = job?.label ?? options.label ?? '';
+  const percent = job ? jobPercent(job) : null;
+  const refreshed = useRef<string | null>(null);
+  const { invalidates } = options;
   useEffect(() => {
     if (!jobId) return;
-    if (isJobFinished(job)) removeRunning(jobId);
-    else upsertRunning({ id: jobId, label, progress: job?.progress ?? null });
-  }, [jobId, job, label]);
+    if (isJobFinished(job)) {
+      removeRunning(jobId);
+      if (refreshed.current !== jobId) {
+        refreshed.current = jobId;
+        for (const key of invalidates ?? []) void queryClient.invalidateQueries({ queryKey: key });
+      }
+    } else upsertRunning({ id: jobId, label, progress: percent });
+  }, [jobId, job, label, percent, invalidates, queryClient]);
 
-  // Leaving the screen does not cancel the job, but this tab stops showing it.
+  // Leaving the screen does not cancel the job, but this tab stops following it here.
   useEffect(
     () => () => {
       if (jobId) removeRunning(jobId);

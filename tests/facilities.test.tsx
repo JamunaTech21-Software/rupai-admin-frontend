@@ -10,6 +10,7 @@ import { authMocks, MOCK_PASSWORD, resetMockSession } from '@/lib/mocking/contra
 
 import { axeViolations } from './axe';
 import { server } from './msw/server';
+import { openSidebarGroup } from './sidebar';
 
 /** P1.08 (RUP-165): factories, warehouses, parties and the reusable contacts panel. */
 
@@ -39,7 +40,7 @@ describe('factories', () => {
     const table = await screen.findByRole('table', { name: 'Factories' });
     expect(await within(table).findByRole('link', { name: 'Rupai Central Factory' })).toBeInTheDocument();
     expect(within(table).getByText('Licence expired')).toBeInTheDocument();
-    const nav = screen.getByRole('navigation', { name: 'Main' });
+    const nav = await openSidebarGroup('Estate Management');
     for (const name of ['Factories', 'Warehouses', 'Parties']) {
       expect(within(nav).getByRole('link', { name })).toBeInTheDocument();
     }
@@ -55,7 +56,7 @@ describe('factories', () => {
     await screen.findByRole('heading', { level: 1, name: 'No Licence Factory' });
 
     await userEvent.click(
-      within(screen.getByRole('navigation', { name: 'Main' })).getByRole('link', { name: 'Factories' }),
+      within(await openSidebarGroup('Estate Management')).getByRole('link', { name: 'Factories' }),
     );
     const table = await screen.findByRole('table', { name: 'Factories' });
     const central = (await within(table).findByRole('link', { name: 'Rupai Central Factory' })).closest('tr');

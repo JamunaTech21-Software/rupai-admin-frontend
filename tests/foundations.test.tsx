@@ -125,23 +125,41 @@ describe('permissions', () => {
   it('the sidebar keeps only permitted entries and drops empty sections', () => {
     const t = ((key: string) => key) as never;
     const viewer = buildNavigation(t, (p) => p === undefined);
-    expect(viewer.map((s) => s.id)).toEqual(['main', 'system']);
+    // The viewer may open nothing but the dashboard and the design tokens.
+    expect(viewer.map((s) => s.id)).toEqual(['main', 'systemSettings']);
     const admin = buildNavigation(t, () => true);
-    expect(admin.find((s) => s.id === 'administration')?.items.map((i) => i.id)).toEqual([
+    const children = (section: string, group: string) =>
+      admin
+        .find((s) => s.id === section)
+        ?.items.find((i) => i.id === group)
+        ?.children?.map((i) => i.id);
+    expect(admin.map((s) => s.id)).toEqual(['main', 'masterData', 'salesAccounts', 'systemSettings']);
+    expect(children('main', 'estate-management')).toEqual([
+      'estates',
+      'fields',
+      'factories',
+      'warehouses',
+      'parties',
+      'expiring-documents',
+    ]);
+    expect(children('masterData', 'master-data')).toEqual(['masters', 'uoms', 'tea-grades', 'seasons']);
+    expect(children('salesAccounts', 'accounts-finance')).toEqual(['fiscal-years', 'accounting-periods']);
+    expect(children('systemSettings', 'user-administration')).toEqual([
       'users',
       'roles',
       'access-review',
       'audit',
+    ]);
+    expect(children('systemSettings', 'configuration')).toEqual([
+      'organisation',
       'numbering',
       'settings',
+      'jobs',
+      'recurring-jobs',
+      'design-tokens',
     ]);
     expect(titleFor(admin, '/admin/users/42')).toBe('users');
     expect(titleFor(admin, '/')).toBe('dashboard');
-    expect(admin.find((s) => s.id === 'reference')?.items.map((i) => i.id)).toEqual([
-      'masters',
-      'uoms',
-      'tea-grades',
-    ]);
     expect(titleFor(admin, '/masters/department')).toBe('masters');
   });
 });

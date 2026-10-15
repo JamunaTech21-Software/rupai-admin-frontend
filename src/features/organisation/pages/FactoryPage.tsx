@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { z } from 'zod';
 
+import { AttachmentsPanel } from '@/features/documents';
 import { PageError, PageLoading } from '@/features/system';
 import { usePermission } from '@/lib/auth';
 import { errorBehaviour, isApiError } from '@/lib/errors';
@@ -126,6 +127,9 @@ function FactoryEditor({ factory }: { readonly factory: Factory | null }) {
       }}
       refusal={refusal}
       onRefused={setRefusal}
+      after={
+        factory ? <AttachmentsPanel owner={{ path: '/factories', id: factory.id }} module="factory" /> : null
+      }
     >
       <Input label={t('factory.code')} isRequired autoComplete="off" {...bind.code} {...readOnly} />
       <Input label={t('factory.name')} isRequired autoComplete="off" {...bind.name} {...readOnly} />

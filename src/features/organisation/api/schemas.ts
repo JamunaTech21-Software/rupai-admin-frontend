@@ -2,12 +2,17 @@ import { z } from 'zod';
 
 /**
  * The organisation hierarchy (P1.07, backend organisation.schema.ts): organisation → estate → division →
- * section → field. Areas are hectares as decimal strings with 3 places ("12.500"); dates are YYYY-MM-DD.
+ * section → field. Areas are acres (R.2) as decimal strings with 3 places ("12.500"); dates are YYYY-MM-DD.
  */
 
 export const STATUSES = ['active', 'inactive'] as const;
 export type NodeStatus = (typeof STATUSES)[number];
 export const OWNERSHIP_TYPES = ['owned', 'leased', 'government_lease', 'other'] as const;
+/** R.2: replaces ownership_type. */
+export const ESTATE_TYPES = ['company_owned', 'private_estate', 'government_estate'] as const;
+export type EstateType = (typeof ESTATE_TYPES)[number];
+export const ESTATE_CATEGORIES = ['large', 'medium', 'small'] as const;
+export type EstateCategory = (typeof ESTATE_CATEGORIES)[number];
 export type OwnershipType = (typeof OWNERSHIP_TYPES)[number];
 export const FIELD_STATUSES = ['producing', 'young', 'nursery', 'uprooted', 'fallow', 'abandoned'] as const;
 export type FieldStatus = (typeof FIELD_STATUSES)[number];
@@ -53,10 +58,28 @@ export const EstateSchema = z.object({
   manager_profile_id: z.string().nullable(),
   phone: z.string().nullable(),
   email: z.string().nullable(),
+  /** Deprecated (R.2): established_year and estate_type replace them. */
   established_on: z.string().nullable(),
   ownership_type: z.enum(OWNERSHIP_TYPES).nullable(),
   status: z.enum(STATUSES),
   remarks: z.string().nullable(),
+  // ---- R.2 estate profile ----
+  established_year: z.number().int().nullable(),
+  owner_name: z.string().nullable(),
+  estate_type: z.enum(ESTATE_TYPES).nullable(),
+  estate_category: z.enum(ESTATE_CATEGORIES).nullable(),
+  police_station: z.string().nullable(),
+  /** The administrative division (e.g. Rangpur), not the estate's own divisions. */
+  admin_division: z.string().nullable(),
+  country_id: z.string().nullable(),
+  postal_code: z.string().nullable(),
+  website: z.string().nullable(),
+  /** Decimal degrees as strings, up to 6 places: "26.341700". Both or neither. */
+  latitude: z.string().nullable(),
+  longitude: z.string().nullable(),
+  description: z.string().nullable(),
+  amenities: z.array(z.object({ id: z.string(), code: z.string(), name: z.string() })),
+  other_amenities: z.string().nullable(),
   version: z.number(),
   created_at: z.string(),
   updated_at: z.string().nullable(),
@@ -128,6 +151,8 @@ export type WarehouseType = (typeof WAREHOUSE_TYPES)[number];
 export const PARTY_TYPES = ['individual', 'organisation', 'government'] as const;
 export type PartyType = (typeof PARTY_TYPES)[number];
 export const CONTACT_TYPES = ['primary', 'accounts', 'operations', 'emergency', 'other'] as const;
+/** An estate's key people (R.2), set on the estate profile rather than in a contacts list. */
+export const KEY_CONTACT_TYPES = ['estate_manager', 'assistant_manager'] as const;
 export type ContactType = (typeof CONTACT_TYPES)[number];
 
 export const FactorySchema = z.object({
@@ -193,7 +218,7 @@ export const ContactSchema = z.object({
   owner_id: z.string(),
   contact_name: z.string(),
   designation: z.string().nullable(),
-  contact_type: z.enum(CONTACT_TYPES),
+  contact_type: z.enum([...CONTACT_TYPES, ...KEY_CONTACT_TYPES]),
   phone: z.string().nullable(),
   phone_alt: z.string().nullable(),
   email: z.string().nullable(),

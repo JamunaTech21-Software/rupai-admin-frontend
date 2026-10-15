@@ -34,7 +34,8 @@ export const COLOR_GROUPS: readonly TokenGroup[] = [
       t('--color-surface', 'Cards, panels, inputs'),
       t('--color-surface-subtle', 'Table headers, hovered rows, read-only fields'),
       t('--color-surface-inverse', 'Tooltips, the environment banner'),
-      t('--color-fg', 'Primary text'),
+      t('--color-fg', 'Body text'),
+      t('--color-fg-strong', 'Headings, names, emphasis'),
       t('--color-fg-muted', 'Secondary text, labels'),
       t('--color-fg-subtle', 'Hints, placeholders, metadata'),
       t('--color-fg-on-primary', 'Text on primary and on solid feedback colours'),
@@ -52,6 +53,8 @@ export const COLOR_GROUPS: readonly TokenGroup[] = [
       t('--color-primary-subtle', 'Selected rows, the active nav background'),
       t('--color-primary-strong', 'Text on primary-subtle'),
       t('--color-focus', 'The focus ring'),
+      t('--color-heading', 'Card titles'),
+      t('--color-card-header', 'The bar behind a card title'),
     ],
   },
   {
@@ -77,12 +80,14 @@ export const FONT_TOKENS: readonly Token[] = [
   t('--font-mono', 'Codes and identifiers'),
 ];
 
-/** The type scale, ratio 1.200 from a 16 px base. */
+/** The type scale: Tailwind's, as the design (R.1). */
 export const TEXT_TOKENS: readonly Token[] = [
-  t('--text-xs', 'Captions only, never body text'),
-  t('--text-sm', 'Metadata, table secondary text'),
+  t('--text-2xs', 'Sidebar section labels only (10 px, uppercase)'),
+  t('--text-xs', 'Captions, badges, sidebar sub-items (12 px)'),
+  t('--text-nav', 'Sidebar items (13 px)'),
+  t('--text-sm', 'Form labels, table cells, buttons, metadata (14 px)'),
   t('--text-base', 'Body text and inputs (the minimum on mobile)'),
-  t('--text-lg', 'Emphasised body, card titles'),
+  t('--text-lg', 'Card titles, the header title (18 px)'),
   t('--text-xl', 'Section titles'),
   t('--text-2xl', 'Page titles'),
   t('--text-3xl', 'Large headings'),
@@ -117,7 +122,7 @@ export const BREAKPOINT_TOKENS: readonly Token[] = [
 
 export const SIZE_TOKENS: readonly Token[] = [
   t('--size-touch-target', 'Minimum touch target below md (44 px)'),
-  t('--size-control', 'Control height from md up (36 px)'),
+  t('--size-control', 'Control height from md up (40 px)'),
 ];
 
 export const Z_INDEX_TOKENS: readonly Token[] = [
@@ -168,8 +173,8 @@ const pair = (fg: string, bg: string, min: 4.5 | 3, use: string): ContrastPair =
 
 /** Every foreground/background combination the interface uses. Each must meet its minimum. */
 export const CONTRAST_PAIRS: readonly ContrastPair[] = [
-  ...(['fg', 'fg-muted', 'fg-subtle'] as const).flatMap((fg) =>
-    (['canvas', 'surface', 'surface-subtle'] as const).map((bg) =>
+  ...(['fg', 'fg-strong', 'fg-muted', 'fg-subtle'] as const).flatMap((fg) =>
+    (['canvas', 'surface', 'surface-subtle', 'card-header'] as const).map((bg) =>
       pair(`--color-${fg}`, `--color-${bg}`, 4.5, `${fg} text on ${bg}`),
     ),
   ),
@@ -178,6 +183,9 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   pair('--color-primary', '--color-surface', 4.5, 'Link on a card'),
   pair('--color-primary', '--color-canvas', 4.5, 'Link on the page'),
   pair('--color-primary-strong', '--color-primary-subtle', 4.5, 'Active nav item, selected row'),
+  pair('--color-primary', '--color-primary-subtle', 4.5, 'Hovered nav item'),
+  pair('--color-heading', '--color-card-header', 4.5, 'Card title on its bar'),
+  pair('--color-heading', '--color-surface', 4.5, 'Card title without a bar'),
   pair('--color-fg-inverse', '--color-surface-inverse', 4.5, 'Tooltip, environment banner'),
   pair('--color-line-strong', '--color-surface', 3, 'Control border on a card'),
   pair('--color-line-strong', '--color-canvas', 3, 'Control border on the page'),

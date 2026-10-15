@@ -47,6 +47,17 @@ interface Store {
   warehouses: Warehouse[];
   parties: Party[];
   contacts: Contact[];
+  /** Estate photographs (R.2): documents of type Photograph. */
+  photos: MockPhoto[];
+}
+
+interface MockPhoto {
+  id: string;
+  owner_id: string;
+  title: string | null;
+  file_name: string;
+  mime_type: string;
+  version: number;
 }
 
 const base = { status: 'active' as const, version: 1, created_at: NOW, updated_at: null };
@@ -68,6 +79,20 @@ function seed(): Store {
     established_on: null,
     ownership_type: 'owned',
     remarks: null,
+    established_year: null,
+    owner_name: null,
+    estate_type: null,
+    estate_category: null,
+    police_station: null,
+    admin_division: null,
+    country_id: null,
+    postal_code: null,
+    website: null,
+    latitude: null,
+    longitude: null,
+    description: null,
+    amenities: [],
+    other_amenities: null,
   });
   const division = (id: string, estate_id: string, code: string, name: string): Division => ({
     ...base,
@@ -232,6 +257,29 @@ function seed(): Store {
         email: null,
         is_primary: false,
       },
+      {
+        ...base,
+        id: 'c3',
+        owner_type: 'estate',
+        owner_id: 'e1',
+        contact_name: 'Abdul Karim',
+        designation: 'Estate Manager',
+        contact_type: 'estate_manager',
+        phone: '+8801711000010',
+        phone_alt: null,
+        email: 'manager@rupai.example',
+        is_primary: true,
+      },
+    ],
+    photos: [
+      {
+        id: 'doc1',
+        owner_id: 'e1',
+        title: 'Tea garden',
+        file_name: 'garden.jpg',
+        mime_type: 'image/jpeg',
+        version: 1,
+      },
     ],
   };
 }
@@ -322,7 +370,7 @@ const hasChildren = (path: NodePath, id: string) =>
 
 // ---- Facilities, parties and contacts (P1.08) --------------------------------------------------------------
 
-const OWNER_TYPE = { warehouses: 'warehouse', parties: 'party' } as const;
+const OWNER_TYPE = { warehouses: 'warehouse', parties: 'party', estates: 'estate' } as const;
 type OwnerPath = keyof typeof OWNER_TYPE;
 
 /** The owner's contacts, primary first. */
@@ -335,6 +383,123 @@ const contactsOf = (path: OwnerPath, id: string) => {
 function syncWarehousePhone(id: string) {
   const warehouse = store.warehouses.find((w) => w.id === id);
   if (warehouse) warehouse.phone = contactsOf('warehouses', id).find((c) => c.is_primary)?.phone ?? null;
+}
+
+// ---- Estate profile (R.2) -----------------------------------------------------------------------------------
+
+/** The facility list (GET /lookups/amenity), as the backend seeds it. */
+export const MOCK_AMENITIES = [
+  { id: 'am1', code: 'WAREHOUSE', name: 'Warehouse' },
+  { id: 'am2', code: 'HOSPITAL', name: 'Hospital / dispensary' },
+  { id: 'am3', code: 'SCHOOL', name: 'School' },
+  { id: 'am4', code: 'WATER_SUPPLY', name: 'Water supply' },
+];
+/** The Photograph document type (GET /lookups/document_type). */
+export const MOCK_PHOTOGRAPH_TYPE = { id: 'dt_photo', code: 'PHOTOGRAPH', name: 'Photograph' };
+
+/** An estate body as stored: amenity_ids (what the client sends) become amenities (what it reads). */
+function withAmenities(body: Record<string, unknown>): Record<string, unknown> {
+  if (!Array.isArray(body.amenity_ids)) return body;
+  const { amenity_ids: ids, ...rest } = body as { amenity_ids: string[] } & Record<string, unknown>;
+  return { ...rest, amenities: MOCK_AMENITIES.filter((a) => ids.includes(a.id)) };
+}
+
+const photoOut = (photo: MockPhoto) => ({
+  id: photo.id,
+  owner_type: 'estate',
+  owner_id: photo.owner_id,
+  title: photo.title,
+  file_name: photo.file_name,
+  mime_type: photo.mime_type,
+  document_type: MOCK_PHOTOGRAPH_TYPE,
+  status: 'active',
+  version: photo.version,
+});
+
+/** A 1×1 PNG, standing in for every photograph. */
+const PIXEL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+function estateProfileMocks(b: string): RequestHandler[] {
+  const estate = (id: unknown) => store.estates.find((e) => e.id === id);
+  return [
+    http.get(`${b}/estates/:id/summary`, ({ request, params }) => {
+      const refused = requireAuth(request);
+      if (refused) return refused;
+      const row = estate(params.id);
+      if (!row) return notFound();
+      const fields = store.fields.filter((f) => f.estate_id === row.id && f.status === 'active');
+      const tea = fields.reduce((sum, f) => sum.plus(f.planted_area ?? '0'), new Dec('0'));
+      const gross = fields.reduce((sum, f) => sum.plus(f.gross_area), new Dec('0'));
+      const divisions = store.divisions.filter((d) => d.estate_id === row.id);
+      return ok({
+        estate_id: row.id,
+        total_land_area: row.total_area,
+        tea_area: tea.toFixed(3),
+        non_tea_area: row.total_area
+          ? Dec.max(new Dec(row.total_area).minus(tea), new Dec('0')).toFixed(3)
+          : null,
+        field_area: gross.toFixed(3),
+        division_count: divisions.length,
+        section_count: store.sections.filter((s) => divisions.some((d) => d.id === s.division_id)).length,
+        field_count: fields.length,
+        factory_count: store.factories.filter((f) => f.primary_estate_id === row.id).length,
+        worker_count: 0,
+        family_count: 0,
+        workforce_available: false,
+        photo_count: store.photos.filter((p) => p.owner_id === row.id).length,
+      });
+    }),
+    http.get(`${b}/estates/:id/documents`, ({ request, params }) => {
+      const refused = requireAuth(request);
+      if (refused) return refused;
+      if (!estate(params.id)) return notFound();
+      return ok(store.photos.filter((p) => p.owner_id === params.id).map(photoOut));
+    }),
+    http.post(`${b}/estates/:id/documents`, async ({ request, params }) => {
+      const refused = requireAuth(request);
+      if (refused) return refused;
+      if (!estate(params.id)) return notFound();
+      const form = await request.formData();
+      const file = form.get('file');
+      const title = form.get('title');
+      if (!(file instanceof File))
+        return apiError(422, 'VALIDATION_FAILED', 'The request is not valid.', [
+          { field: 'file', code: 'REQUIRED', message: 'Attach a file.' },
+        ]);
+      const photo: MockPhoto = {
+        id: nextId('doc'),
+        owner_id: String(params.id),
+        title: typeof title === 'string' ? title : null,
+        file_name: file.name,
+        mime_type: file.type,
+        version: 1,
+      };
+      store.photos.push(photo);
+      return created(photoOut(photo), `${b}/documents/${photo.id}`, 1);
+    }),
+    http.get(`${b}/documents/:id/download`, ({ request, params }) => {
+      const refused = requireAuth(request);
+      if (refused) return refused;
+      const photo = store.photos.find((p) => p.id === params.id);
+      if (!photo) return notFound();
+      return ok({
+        url: PIXEL,
+        expires_at: new Date(Date.now() + 5 * 60_000).toISOString(),
+        file_name: photo.file_name,
+        mime_type: photo.mime_type,
+        file_size_bytes: 68,
+      });
+    }),
+    http.delete(`${b}/documents/:id`, ({ request, params }) => {
+      const refused = requireAuth(request);
+      if (refused) return refused;
+      const index = store.photos.findIndex((p) => p.id === params.id);
+      if (index < 0) return notFound();
+      store.photos.splice(index, 1);
+      return new HttpResponse(null, { status: 204 });
+    }),
+  ];
 }
 
 function facilityMocks(b: string): RequestHandler[] {
@@ -364,7 +529,7 @@ function facilityMocks(b: string): RequestHandler[] {
       return created(row, `${b}/${path}/${row.id}`, 1);
     });
 
-  const ownerHandlers = (['warehouses', 'parties'] as const).flatMap((path) => {
+  const ownerHandlers = (['warehouses', 'parties', 'estates'] as const).flatMap((path) => {
     const owner = (id: unknown) => (store[path] as { id: string }[]).find((o) => o.id === id);
     const contact = (ownerId: unknown, contactId: unknown) =>
       contactsOf(path, String(ownerId)).find((c) => c.id === contactId);
@@ -403,15 +568,17 @@ function facilityMocks(b: string): RequestHandler[] {
         if (path === 'warehouses') syncWarehousePhone(String(params.id));
         return created(row, `${b}/${path}/${String(params.id)}/contacts/${row.id}`, 1);
       }),
-      http.put(`${b}/${path}/:id/contacts/:contactId`, async ({ request, params }) => {
-        const row = contact(params.id, params.contactId);
-        if (!row) return notFound();
-        const refused = requireAuth(request) ?? requireIfMatch(request, row.version);
-        if (refused) return refused;
-        Object.assign(row, (await request.json()) as Partial<Contact>);
-        if (path === 'warehouses') syncWarehousePhone(String(params.id));
-        return ok(touch(row), { version: row.version });
-      }),
+      ...(['put', 'patch'] as const).map((method) =>
+        http[method](`${b}/${path}/:id/contacts/:contactId`, async ({ request, params }) => {
+          const row = contact(params.id, params.contactId);
+          if (!row) return notFound();
+          const refused = requireAuth(request) ?? requireIfMatch(request, row.version);
+          if (refused) return refused;
+          Object.assign(row, (await request.json()) as Partial<Contact>);
+          if (path === 'warehouses') syncWarehousePhone(String(params.id));
+          return ok(touch(row), { version: row.version });
+        }),
+      ),
       http.post(`${b}/${path}/:id/contacts/:contactId/make-primary`, ({ request, params }) => {
         const row = contact(params.id, params.contactId);
         if (!row) return notFound();
@@ -525,7 +692,7 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
       const body = (await request.json()) as Partial<Estate> & { code: string; name: string };
       if (store.estates.some((e) => e.code === body.code))
         return duplicate('code', 'An estate with this code already exists.');
-      const estate: Estate = {
+      const estate = {
         ...base,
         id: nextId('e'),
         organisation_id: '1',
@@ -539,9 +706,25 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
         established_on: null,
         ownership_type: null,
         remarks: null,
-        ...body,
+        established_year: null,
+        owner_name: null,
+        estate_type: null,
+        estate_category: null,
+        police_station: null,
+        admin_division: null,
+        country_id: null,
+        postal_code: null,
+        website: null,
+        latitude: null,
+        longitude: null,
+        description: null,
+        amenities: [],
+        other_amenities: null,
+        code: body.code,
+        name: body.name,
+        ...withAmenities(body),
         created_at: new Date().toISOString(),
-      };
+      } as Estate;
       store.estates.push(estate);
       return created(estate, `${b}/estates/${estate.id}`, estate.version);
     }),
@@ -686,6 +869,7 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
     }),
 
     // ---- Shared by every node: read, replace, status, delete ----
+    ...estateProfileMocks(b),
     ...facilityMocks(b),
 
     ...(
@@ -697,27 +881,33 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
         const row = (tables()[path] as { id: string; version: number }[]).find((r) => r.id === params.id);
         return row ? ok(row, { version: row.version }) : notFound();
       }),
-      http.put(`${b}/${path}/:id`, async ({ request, params }) => {
-        const row = (tables()[path] as Record<string, unknown>[]).find((r) => r.id === params.id) as
-          { id: string; version: number; updated_at: string | null; gross_area?: string } | undefined;
-        if (!row) return notFound();
-        const refused = requireAuth(request) ?? requireIfMatch(request, row.version);
-        if (refused) return refused;
-        const body = (await request.json()) as Record<string, unknown>;
-        if (
-          path === 'fields' &&
-          typeof body.planted_area === 'string' &&
-          typeof body.gross_area === 'string'
-        ) {
-          if (new Dec(body.planted_area).gt(body.gross_area)) {
-            return apiError(422, 'VALIDATION_FAILED', 'The request is not valid.', [
-              { field: 'planted_area', code: 'TOO_LARGE', message: 'Cannot be larger than the gross area.' },
-            ]);
+      ...(['put', 'patch'] as const).map((method) =>
+        http[method](`${b}/${path}/:id`, async ({ request, params }) => {
+          const row = (tables()[path] as Record<string, unknown>[]).find((r) => r.id === params.id) as
+            { id: string; version: number; updated_at: string | null; gross_area?: string } | undefined;
+          if (!row) return notFound();
+          const refused = requireAuth(request) ?? requireIfMatch(request, row.version);
+          if (refused) return refused;
+          const body = (await request.json()) as Record<string, unknown>;
+          if (
+            path === 'fields' &&
+            typeof body.planted_area === 'string' &&
+            typeof body.gross_area === 'string'
+          ) {
+            if (new Dec(body.planted_area).gt(body.gross_area)) {
+              return apiError(422, 'VALIDATION_FAILED', 'The request is not valid.', [
+                {
+                  field: 'planted_area',
+                  code: 'TOO_LARGE',
+                  message: 'Cannot be larger than the gross area.',
+                },
+              ]);
+            }
           }
-        }
-        Object.assign(row, body);
-        return ok(touch(row), { version: row.version });
-      }),
+          Object.assign(row, path === 'estates' ? withAmenities(body) : body);
+          return ok(touch(row), { version: row.version });
+        }),
+      ),
       http.post(`${b}/${path}/:id/:action`, ({ request, params }) => {
         if (params.action !== 'deactivate' && params.action !== 'reactivate') return notFound();
         const row = (

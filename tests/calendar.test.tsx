@@ -10,6 +10,7 @@ import { authMocks, MOCK_PASSWORD, resetMockSession } from '@/lib/mocking/contra
 
 import { axeViolations } from './axe';
 import { server } from './msw/server';
+import { openSidebarGroup } from './sidebar';
 
 /** P1.09 (RUP-181): seasons, fiscal years and accounting periods. */
 
@@ -47,9 +48,11 @@ describe('seasons', () => {
     expect(within(table).getByText('Planned')).toBeInTheDocument();
     expect(within(table).getAllByText('Closed')).toHaveLength(2);
     expect(await within(table).findAllByText('Jamuna Valley Tea Estate')).toHaveLength(2);
-    const nav = screen.getByRole('navigation', { name: 'Main' });
-    for (const name of ['Seasons', 'Fiscal years', 'Accounting periods']) {
-      expect(within(nav).getByRole('link', { name })).toBeInTheDocument();
+    const masters = await openSidebarGroup('Master Data');
+    expect(within(masters).getByRole('link', { name: 'Seasons' })).toBeInTheDocument();
+    const accounts = await openSidebarGroup('Accounts & Finance');
+    for (const name of ['Fiscal years', 'Accounting periods']) {
+      expect(within(accounts).getByRole('link', { name })).toBeInTheDocument();
     }
     expect(await axeViolations(appRoot)).toEqual([]);
   });

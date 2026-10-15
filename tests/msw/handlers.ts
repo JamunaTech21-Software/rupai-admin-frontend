@@ -8,4 +8,6 @@ import { http, HttpResponse, type RequestHandler } from 'msw';
 export const handlers: RequestHandler[] = [
   http.get('*/health', () => HttpResponse.json({ status: 'ok' }, { headers: { 'X-Environment': 'test' } })),
   http.get('*/api/v1/lookups', () => HttpResponse.json({ data: {}, meta: { request_id: 'test' } })),
+  // The top bar asks for the user's running jobs; no job unless a test starts one.
+  http.get('*/api/v1/jobs', () => HttpResponse.json({ data: [], meta: { request_id: 'test' } })),
 ];

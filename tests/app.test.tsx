@@ -13,6 +13,7 @@ import { authMocks, MOCK_PASSWORD, resetMockSession } from '@/lib/mocking/contra
 
 import { axeViolations } from './axe';
 import { server } from './msw/server';
+import { openSidebarGroup } from './sidebar';
 
 const BASE = 'http://localhost/api/v1';
 
@@ -107,7 +108,8 @@ describe('permissions', () => {
     await signIn('viewer');
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' });
     expect(within(sidebar()).queryByRole('link', { name: 'Users' })).not.toBeInTheDocument();
-    expect(within(sidebar()).queryByRole('heading', { name: 'Administration' })).not.toBeInTheDocument();
+    // A group with nothing the user may open is not shown at all.
+    expect(within(sidebar()).queryByRole('button', { name: 'User Administration' })).not.toBeInTheDocument();
     expect(within(sidebar()).getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
   });
 
@@ -115,6 +117,7 @@ describe('permissions', () => {
     renderApp('/login');
     await signIn('manager');
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' });
+    await openSidebarGroup('User Administration');
     expect(within(sidebar()).getByRole('link', { name: 'Users' })).toHaveAttribute('href', '/admin/users');
     expect(within(sidebar()).getByRole('link', { name: 'Audit log' })).toBeInTheDocument();
   });

@@ -17,7 +17,10 @@ export interface CardProps {
   readonly className?: string;
 }
 
-/** A bordered surface grouping related content: a record's section, a summary, a chart. */
+/**
+ * A bordered surface grouping related content: a record's section, a summary, a chart. As the design (R.1): the
+ * title sits on a tinted bar in the card-title colour.
+ */
 export function Card({
   title,
   headingLevel = 2,
@@ -33,13 +36,16 @@ export function Card({
   return (
     <section
       {...(title ? { 'aria-labelledby': headingId } : {})}
-      className={cx('flex flex-col rounded-lg border border-line bg-surface shadow-sm', className)}
+      className={cx(
+        'flex flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-sm',
+        className,
+      )}
     >
       {title || actions ? (
-        <div className="flex items-start justify-between gap-4 border-b border-line px-4 py-3">
+        <div className="flex items-start justify-between gap-4 border-b border-line bg-card-header px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex min-w-0 flex-col gap-0.5">
             {title ? (
-              <Heading id={headingId} className="text-base font-semibold text-fg">
+              <Heading id={headingId} className="text-lg font-semibold text-heading">
                 {title}
               </Heading>
             ) : null}
@@ -48,8 +54,8 @@ export function Card({
           {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
         </div>
       ) : null}
-      <div className={cx('flex-1', padding === 'md' && 'p-4')}>{children}</div>
-      {footer ? <div className="border-t border-line px-4 py-3">{footer}</div> : null}
+      <div className={cx('flex-1', padding === 'md' && 'p-4 sm:p-6')}>{children}</div>
+      {footer ? <div className="border-t border-line px-4 py-3 sm:px-6">{footer}</div> : null}
     </section>
   );
 }

@@ -18,6 +18,7 @@ import { useEstatesList, useFieldTotals } from '../api/hierarchy';
 import { type Estate, STATUSES } from '../api/schemas';
 import { NodeStatusBadge } from '../components/NodeLifecycle';
 import { ScopeNotice } from '../components/ScopeNotice';
+import { useArea } from '../area';
 
 const SEARCH = filterKey('name', 'like');
 const STATUS = filterKey('status');
@@ -26,6 +27,7 @@ const STATUS = filterKey('status');
 export function EstatesPage() {
   const { t } = useTranslation('org');
   const format = useFormat();
+  const area = useArea();
   const canCreate = usePermission('estate.create');
   const list = useEstatesList();
   // What each estate's fields cover: known even when the estate's own total area was never entered.
@@ -58,7 +60,7 @@ export function EstatesPage() {
       align: 'center',
       cell: (estate) =>
         estate.total_area ? (
-          format.quantity(estate.total_area, 'ha')
+          area.format(estate.total_area)
         ) : (
           <span className="text-fg-subtle">{t('estates.notRecorded')}</span>
         ),
@@ -71,7 +73,7 @@ export function EstatesPage() {
       cell: (estate) => {
         const sum = totals.data?.get(estate.id);
         if (totals.isPending) return <span className="text-fg-subtle">…</span>;
-        return sum ? format.quantity(sum.gross, 'ha') : format.quantity('0', 'ha');
+        return sum ? area.format(sum.gross) : area.format('0');
       },
     },
     {

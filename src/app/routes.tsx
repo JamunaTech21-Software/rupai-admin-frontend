@@ -11,7 +11,9 @@ import {
 import { numberingRoutes, settingsRoutes } from '@/features/configuration';
 import { accountRoutes, changePasswordRoute, publicAuthRoutes } from '@/features/auth';
 import { designSystemRoutes } from '@/features/design-system';
+import { expiringDocumentsRoutes } from '@/features/documents';
 import { homeRoutes } from '@/features/home';
+import { jobRoutes, scheduleRoutes } from '@/features/jobs';
 import {
   estateCreateRoutes,
   estateRoutes,
@@ -101,6 +103,13 @@ export const routes: RouteObject[] = [
                 element: <RequirePermission permission="accounting_period.view" />,
                 children: periodRoutes,
               },
+              {
+                element: <RequirePermission permission="document.view" />,
+                children: expiringDocumentsRoutes,
+              },
+              // Everyone sees their own jobs; the recurring jobs page is for those who may view the system.
+              ...jobRoutes,
+              { element: <RequirePermission permission="system.view" />, children: scheduleRoutes },
               { element: <RequirePermission permission="lookup.view" />, children: mastersRoutes },
               // Each master has its own view permission: the page checks it.
               ...masterTypeRoutes,

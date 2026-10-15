@@ -8,7 +8,7 @@ export const buttonVariants: Record<ButtonVariant, string> = {
   primary:
     'bg-primary text-fg-on-primary border-transparent data-hovered:bg-primary-hover data-pressed:bg-primary-hover',
   secondary:
-    'bg-surface text-fg border-line-strong data-hovered:bg-surface-subtle data-pressed:bg-surface-subtle',
+    'bg-primary-subtle text-primary-strong border-primary data-hovered:bg-surface data-pressed:bg-surface',
   ghost:
     'bg-transparent text-primary border-transparent data-hovered:bg-primary-subtle data-pressed:bg-primary-subtle',
   danger:
@@ -16,7 +16,7 @@ export const buttonVariants: Record<ButtonVariant, string> = {
 };
 
 export const buttonBase = cx(
-  'relative inline-flex items-center justify-center gap-2 rounded-md border font-medium whitespace-nowrap select-none',
+  'relative inline-flex items-center justify-center gap-2 rounded-md border font-semibold whitespace-nowrap select-none',
   'transition-colors duration-(--duration-fast) ease-(--ease-standard)',
   'data-focus-visible:outline-2 data-focus-visible:outline-offset-2 data-focus-visible:outline-focus',
   'data-disabled:cursor-not-allowed data-disabled:opacity-50',

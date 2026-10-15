@@ -1,5 +1,5 @@
 import { usePermission } from '@/lib/auth';
-import { useFormat, useTranslation } from '@/lib/i18n';
+import { useTranslation } from '@/lib/i18n';
 import { filterKey } from '@/lib/urlState';
 import {
   Badge,
@@ -19,6 +19,7 @@ import { useAllEstates, useFieldsList, useHierarchyNames } from '../api/hierarch
 import { type Field, FIELD_STATUSES, STATUSES } from '../api/schemas';
 import { NodeStatusBadge } from '../components/NodeLifecycle';
 import { ScopeNotice } from '../components/ScopeNotice';
+import { useArea } from '../area';
 
 const SEARCH = filterKey('field_number', 'like');
 const ESTATE = filterKey('estate_id');
@@ -28,7 +29,7 @@ const STATUS = filterKey('status');
 /** Organisation → Fields (P1.07): every field the user may see, by estate and status. */
 export function FieldsPage() {
   const { t } = useTranslation('org');
-  const format = useFormat();
+  const area = useArea();
   const canCreate = usePermission('field.create');
   const list = useFieldsList();
   const estates = useAllEstates();
@@ -76,7 +77,7 @@ export function FieldsPage() {
       isNumeric: true,
       isSortable: true,
       align: 'center',
-      cell: (field) => format.quantity(field.gross_area, 'ha'),
+      cell: (field) => area.format(field.gross_area),
     },
     {
       id: 'planted_area',
@@ -84,7 +85,7 @@ export function FieldsPage() {
       isNumeric: true,
       align: 'center',
       canHide: true,
-      cell: (field) => (field.planted_area ? format.quantity(field.planted_area, 'ha') : notRecorded),
+      cell: (field) => (field.planted_area ? area.format(field.planted_area) : notRecorded),
     },
     {
       id: 'field_status',

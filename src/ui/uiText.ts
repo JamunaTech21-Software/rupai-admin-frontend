@@ -78,6 +78,7 @@ export interface UiText {
   readonly collapseNavigation: string;
   readonly skipToMain: string;
   readonly needAttention: (count: string) => string;
+  readonly appVersion: (version: string) => string;
   readonly account: (name: string) => string;
   readonly step: (index: string, total: string, state: 'complete' | 'current' | 'upcoming') => string;
   readonly remove: (label: string) => string;
@@ -170,6 +171,7 @@ export const UI_TEXT_EN: UiText = {
   collapseNavigation: 'Collapse navigation',
   skipToMain: 'Skip to main content',
   needAttention: (count) => `, ${count} need attention`,
+  appVersion: (version) => `Version ${version}`,
   account: (name) => `Account: ${name}`,
   step: (index, total, state) =>
     `Step ${index} of ${total}${state === 'complete' ? ', complete' : state === 'current' ? ', current' : ''}`,

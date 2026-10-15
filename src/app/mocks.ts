@@ -2,6 +2,8 @@ import { type RequestHandler } from 'msw';
 
 import { loadAdminMocks } from '@/features/admin';
 import { loadConfigurationMocks } from '@/features/configuration';
+import { loadDocumentsMocks } from '@/features/documents';
+import { loadJobsMocks } from '@/features/jobs';
 import { loadOrganisationMocks } from '@/features/organisation';
 import { loadReferenceMocks } from '@/features/reference';
 import { loadSystemMocks } from '@/features/system';
@@ -15,8 +17,10 @@ const FEATURE_MOCKS: Record<string, () => Promise<{ handlers: RequestHandler[] }
   system: loadSystemMocks,
   // Contract mocks from lib (F0.06): demo sign-in (manager / viewer) and background jobs.
   auth: () => import('@/lib/mocking/contract').then((m) => ({ handlers: m.authMocks() })),
-  jobs: () => import('@/lib/mocking/contract').then((m) => ({ handlers: m.jobMocks() })),
+  jobs: loadJobsMocks,
   admin: loadAdminMocks,
+  // Before organisation: its estate-photo handlers answer the same /documents addresses, and the first match wins.
+  documents: loadDocumentsMocks,
   organisation: loadOrganisationMocks,
   reference: loadReferenceMocks,
   configuration: loadConfigurationMocks,

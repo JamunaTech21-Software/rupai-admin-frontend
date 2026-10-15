@@ -53,7 +53,8 @@ function ContactModal({
     defaultValues: {
       contact_name: contact?.contact_name ?? '',
       designation: contact?.designation ?? '',
-      contact_type: contact?.contact_type ?? 'primary',
+      // Key people (estate manager, assistant) are edited on the estate profile, not in this list.
+      contact_type: CONTACT_TYPES.find((type) => type === contact?.contact_type) ?? 'primary',
       phone: contact?.phone ?? '',
       phone_alt: contact?.phone_alt ?? '',
       email: contact?.email ?? '',

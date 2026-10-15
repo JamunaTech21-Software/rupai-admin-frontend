@@ -60,12 +60,9 @@ describe('design tokens', () => {
     ]);
   });
 
-  it('builds the type scale on a 1.200 ratio from a 16 px base', () => {
-    const sizes = TEXT_TOKENS.map((token) => rem(token.name));
-    expect(rem('--text-base')).toBe(1);
-    for (let i = 1; i < sizes.length; i += 1) {
-      expect((sizes[i] ?? 0) / (sizes[i - 1] ?? 1)).toBeCloseTo(1.2, 2);
-    }
+  it('uses the design type scale (R.1): 10 to 36 px from a 16 px base, smallest first', () => {
+    const px = TEXT_TOKENS.map((token) => rem(token.name) * 16);
+    expect(px).toEqual([10, 12, 13, 14, 16, 18, 20, 24, 30, 36]);
   });
 
   it('uses a 4 px spacing grid and 44 px touch targets', () => {
