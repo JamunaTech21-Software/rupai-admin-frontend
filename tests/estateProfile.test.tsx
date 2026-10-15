@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { createMemoryRouter, RouterProvider } from 'react-router';
@@ -79,6 +79,7 @@ describe('estate profile', () => {
       'Facilities / Amenities',
       'Estate Images',
       'Estate Overview',
+      'Estate Summary',
       'Geo Location',
       'Description / Note',
     ]) {
@@ -91,6 +92,24 @@ describe('estate profile', () => {
     const overview = await card('Estate Overview');
     expect(within(overview).getAllByText('Available with HR')).toHaveLength(2);
     expect(await axeViolations(appRoot)).toEqual([]);
+  });
+
+  it('works out non-tea area from the total land area as it is typed', async () => {
+    await openProfile();
+    const overview = await card('Estate Overview');
+    const nonTea = () => within(overview).getByText('Non-tea area (acre)').nextElementSibling;
+    expect(nonTea()).toHaveTextContent('Not declared');
+    // Tea area is 28.750 acres (from the fields); 40 declared leaves 11.25 outside tea.
+    await userEvent.type(within(overview).getByRole('textbox', { name: /Total land area/ }), '40');
+    await waitFor(() => {
+      expect(nonTea()).toHaveTextContent('11.25');
+    });
+    // A total smaller than the tea area never goes below zero.
+    await userEvent.clear(within(overview).getByRole('textbox', { name: /Total land area/ }));
+    await userEvent.type(within(overview).getByRole('textbox', { name: /Total land area/ }), '10');
+    await waitFor(() => {
+      expect(nonTea()).toHaveTextContent('0.00');
+    });
   });
 
   it('saves the basic information, facilities and a new assistant manager with one Save', async () => {

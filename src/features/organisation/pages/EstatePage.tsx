@@ -38,8 +38,8 @@ import {
 } from '../api/estateProfile';
 import { type EstateInput, useCreateEstate, useEstate, useUpdateEstate } from '../api/hierarchy';
 import { ESTATE_CATEGORIES, ESTATE_TYPES, type Estate, NODE_CODE, PHONE } from '../api/schemas';
-import { AreaInput } from '../components/AreaInput';
 import { EstateOverview } from '../components/EstateOverview';
+import { EstateSummary } from '../components/EstateSummary';
 import { EstatePhotos } from '../components/EstatePhotos';
 import { EstateTabs } from '../components/EstateTabs';
 import { NodeLifecycle } from '../components/NodeLifecycle';
@@ -354,13 +354,15 @@ function EstateProfile({
   const select = (
     name: 'estate_type' | 'estate_category',
     label: string,
+    placeholder: string,
     values: readonly string[],
     labelOf: (value: string) => string,
   ) => (
     <Select
       label={label}
+      placeholder={placeholder}
       isDisabled={!canEdit}
-      value={bind[name].value}
+      value={bind[name].value === NONE ? null : bind[name].value}
       onChange={(value) => {
         if (value) bind[name].onChange(value);
       }}
@@ -386,11 +388,18 @@ function EstateProfile({
 
   const basic = (
     <Card title={t('profile.basic')} headingLevel={2}>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Input label={t('estate.name')} isRequired autoComplete="off" {...bind.name} {...readOnly} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+        <Input
+          label={t('estate.name')}
+          placeholder={t('profile.placeholders.name')}
+          isRequired
+          autoComplete="off"
+          {...bind.name}
+          {...readOnly}
+        />
         <Input
           label={t('estate.code')}
-          hint={t('estate.codeHint')}
+          placeholder={t('profile.placeholders.code')}
           isRequired
           autoComplete="off"
           {...bind.code}
@@ -398,32 +407,58 @@ function EstateProfile({
         />
         <NumberInput
           label={t('profile.establishedYear')}
+          placeholder={t('profile.placeholders.year')}
           formatOptions={{ useGrouping: false, maximumFractionDigits: 0 }}
           minValue={1800}
           maxValue={thisYear()}
           {...bind.established_year}
           {...readOnly}
         />
-        <Input label={t('profile.ownerName')} {...bind.owner_name} {...readOnly} />
-        {select('estate_type', t('profile.estateType'), ESTATE_TYPES, (v) =>
+        <Input
+          label={t('profile.ownerName')}
+          placeholder={t('profile.placeholders.owner')}
+          {...bind.owner_name}
+          {...readOnly}
+        />
+        {select('estate_type', t('profile.estateType'), t('profile.placeholders.type'), ESTATE_TYPES, (v) =>
           t(`profile.types.${v as (typeof ESTATE_TYPES)[number]}`),
         )}
-        {select('estate_category', t('profile.estateCategory'), ESTATE_CATEGORIES, (v) =>
-          t(`profile.categories.${v as (typeof ESTATE_CATEGORIES)[number]}`),
+        {select(
+          'estate_category',
+          t('profile.estateCategory'),
+          t('profile.placeholders.category'),
+          ESTATE_CATEGORIES,
+          (v) => t(`profile.categories.${v as (typeof ESTATE_CATEGORIES)[number]}`),
         )}
-        <Input label={t('profile.address')} className="md:col-span-2" {...bind.address_line1} {...readOnly} />
-        <Input label={t('profile.policeStation')} {...bind.police_station} {...readOnly} />
-        <Input label={t('profile.district')} {...bind.district} {...readOnly} />
+        <Input
+          label={t('profile.address')}
+          placeholder={t('profile.placeholders.address')}
+          {...bind.address_line1}
+          {...readOnly}
+        />
+        <Input
+          label={t('profile.policeStation')}
+          placeholder={t('profile.placeholders.police')}
+          {...bind.police_station}
+          {...readOnly}
+        />
+        <Input
+          label={t('profile.district')}
+          placeholder={t('profile.placeholders.district')}
+          {...bind.district}
+          {...readOnly}
+        />
         <Input
           label={t('profile.adminDivision')}
-          hint={t('profile.adminDivisionHint')}
+          placeholder={t('profile.placeholders.division')}
           {...bind.admin_division}
           {...readOnly}
         />
         <Select
           label={t('profile.country')}
+          placeholder={t('profile.placeholders.country')}
           isDisabled={!canEdit}
-          value={bind.country_id.value === '' ? NONE : bind.country_id.value}
+          value={bind.country_id.value === '' ? null : bind.country_id.value}
           onChange={(value) => {
             bind.country_id.onChange(value === null || value === NONE ? '' : value);
           }}
@@ -435,14 +470,31 @@ function EstateProfile({
             ...countryOptions,
           ]}
         />
-        <Input label={t('profile.postalCode')} {...bind.postal_code} {...readOnly} />
-        <Input label={t('profile.phone')} type="tel" {...bind.phone} {...readOnly} />
-        <Input label={t('profile.email')} type="email" {...bind.email} {...readOnly} />
-        <Input label={t('profile.website')} type="url" {...bind.website} {...readOnly} />
-        <AreaInput
-          label={t('profile.totalArea')}
-          hint={t('profile.totalAreaHint')}
-          {...bind.total_area}
+        <Input
+          label={t('profile.postalCode')}
+          placeholder={t('profile.placeholders.zip')}
+          {...bind.postal_code}
+          {...readOnly}
+        />
+        <Input
+          label={t('profile.phone')}
+          placeholder={t('profile.placeholders.phone')}
+          type="tel"
+          {...bind.phone}
+          {...readOnly}
+        />
+        <Input
+          label={t('profile.email')}
+          placeholder={t('profile.placeholders.email')}
+          type="email"
+          {...bind.email}
+          {...readOnly}
+        />
+        <Input
+          label={t('profile.website')}
+          placeholder={t('profile.placeholders.website')}
+          type="url"
+          {...bind.website}
           {...readOnly}
         />
       </div>
@@ -567,8 +619,9 @@ function EstateProfile({
         }}
       >
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-          <div className="flex min-w-0 flex-col gap-6 xl:col-span-7">
+          <div className="flex min-w-0 flex-col gap-6 xl:col-span-8">
             {basic}
+            <EstateOverview estateId={estate?.id ?? ''} totalArea={bind.total_area} isReadOnly={!canEdit} />
             {managers}
             {facilities}
             {estate ? (
@@ -580,7 +633,7 @@ function EstateProfile({
               />
             ) : null}
           </div>
-          <div className="flex min-w-0 flex-col gap-6 xl:col-span-5">
+          <div className="flex min-w-0 flex-col gap-6 xl:col-span-4">
             {estate ? (
               <EstatePhotos
                 estateId={estate.id}
@@ -589,7 +642,7 @@ function EstateProfile({
                 onRefused={setRefusal}
               />
             ) : null}
-            {estate ? <EstateOverview estateId={estate.id} /> : null}
+            {estate ? <EstateSummary estateId={estate.id} /> : null}
             {geo}
             {description}
           </div>

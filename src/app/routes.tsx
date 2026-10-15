@@ -13,7 +13,9 @@ import { accountRoutes, changePasswordRoute, publicAuthRoutes } from '@/features
 import { designSystemRoutes } from '@/features/design-system';
 import { expiringDocumentsRoutes } from '@/features/documents';
 import { homeRoutes } from '@/features/home';
+import { allApprovalRoutes, approvalRoutes, delegationRoutes } from '@/features/approvals';
 import { jobRoutes, scheduleRoutes } from '@/features/jobs';
+import { workflowCreateRoutes, workflowEditRoutes, workflowRoutes } from '@/features/workflows';
 import {
   estateCreateRoutes,
   estateRoutes,
@@ -107,6 +109,13 @@ export const routes: RouteObject[] = [
                 element: <RequirePermission permission="document.view" />,
                 children: expiringDocumentsRoutes,
               },
+              { element: <RequirePermission permission="workflow.view" />, children: workflowRoutes },
+              { element: <RequirePermission permission="workflow.create" />, children: workflowCreateRoutes },
+              { element: <RequirePermission permission="workflow.edit" />, children: workflowEditRoutes },
+              // Everyone has an approval queue (what they may decide is per item); the full list needs workflow.view.
+              ...approvalRoutes,
+              { element: <RequirePermission permission="workflow.view" />, children: allApprovalRoutes },
+              { element: <RequirePermission permission="user.view" />, children: delegationRoutes },
               // Everyone sees their own jobs; the recurring jobs page is for those who may view the system.
               ...jobRoutes,
               { element: <RequirePermission permission="system.view" />, children: scheduleRoutes },

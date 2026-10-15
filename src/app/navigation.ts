@@ -31,6 +31,11 @@ type PageKey =
   | 'expiringDocuments'
   | 'jobs'
   | 'recurringJobs'
+  | 'approvals'
+  | 'allApprovals'
+  | 'approvalExceptions'
+  | 'workflows'
+  | 'delegations'
   | 'designTokens';
 
 type GroupKey =
@@ -64,6 +69,7 @@ export const NAVIGATION: readonly AppNavSection[] = [
     id: 'main',
     items: [
       { id: 'dashboard', labelKey: 'dashboard', href: '/', icon: 'home' },
+      { id: 'approvals', labelKey: 'approvals', href: '/approvals', icon: 'clipboard' },
       {
         id: 'estate-management',
         groupKey: 'estateManagement',
@@ -168,6 +174,13 @@ export const NAVIGATION: readonly AppNavSection[] = [
           { id: 'users', labelKey: 'users', href: '/admin/users', icon: 'users', permission: 'user.view' },
           { id: 'roles', labelKey: 'roles', href: '/admin/roles', icon: 'shield', permission: 'role.view' },
           {
+            id: 'delegations',
+            labelKey: 'delegations',
+            href: '/approvals/delegations',
+            icon: 'users',
+            permission: 'user.view',
+          },
+          {
             id: 'access-review',
             labelKey: 'accessReview',
             href: '/admin/access-review',
@@ -196,6 +209,13 @@ export const NAVIGATION: readonly AppNavSection[] = [
             permission: 'organisation.view',
           },
           {
+            id: 'workflows',
+            labelKey: 'workflows',
+            href: '/admin/workflows',
+            icon: 'sliders',
+            permission: 'workflow.view',
+          },
+          {
             id: 'numbering',
             labelKey: 'numbering',
             href: '/admin/numbering',
@@ -208,6 +228,20 @@ export const NAVIGATION: readonly AppNavSection[] = [
             href: '/admin/settings',
             icon: 'sliders',
             permission: 'system.view',
+          },
+          {
+            id: 'all-approvals',
+            labelKey: 'allApprovals',
+            href: '/approvals/all',
+            icon: 'inbox',
+            permission: 'workflow.view',
+          },
+          {
+            id: 'approval-exceptions',
+            labelKey: 'approvalExceptions',
+            href: '/approvals/exceptions',
+            icon: 'alert',
+            permission: 'workflow.view',
           },
           { id: 'jobs', labelKey: 'jobs', href: '/jobs', icon: 'clock' },
           {

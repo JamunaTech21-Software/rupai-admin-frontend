@@ -12,6 +12,8 @@ export interface NumberInputProps extends FieldProps {
   readonly minValue?: number;
   readonly maxValue?: number;
   readonly step?: number;
+  /** Shown in the empty box, e.g. an example value. */
+  readonly placeholder?: string;
   /** Intl number formatting, e.g. `{ maximumFractionDigits: 0 }` for whole numbers. */
   readonly formatOptions?: Intl.NumberFormatOptions;
 }
@@ -37,6 +39,7 @@ export function NumberInput({
   minValue,
   maxValue,
   step = 1,
+  placeholder,
   formatOptions = { maximumFractionDigits: 0 },
 }: NumberInputProps) {
   return (
@@ -62,6 +65,7 @@ export function NumberInput({
       <Group className={cx(controlBox, 'pe-1')} isInvalid={Boolean(error)} isDisabled={isDisabled ?? false}>
         <AriaInput
           ref={inputRef as Ref<HTMLInputElement> | undefined}
+          {...(placeholder ? { placeholder } : {})}
           className={cx(innerInput, 'text-end figures')}
         />
         <span className="flex shrink-0 gap-0.5">

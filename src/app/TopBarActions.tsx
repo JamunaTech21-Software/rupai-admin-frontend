@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router';
 
+import { useApprovalsWaiting } from '@/features/approvals';
 import { RunningJobs } from '@/features/jobs';
 import { useAuth, useEstateContext, useMe } from '@/lib/auth';
 import { todayIn } from '@/lib/dates';
@@ -72,22 +73,19 @@ function EstateSelector() {
   );
 }
 
-/**
- * Approvals waiting for this user. The approvals inbox endpoint is not built yet, so the count is 0 and the
- * button says so; it becomes a live count (the `live` cache policy) when the endpoint exists.
- */
-function useApprovalsWaiting(): number {
-  return 0;
-}
-
+/** The approval queue, with how many approvals await this user (a live count, refreshed every minute). */
 function Approvals() {
   const { t } = useTranslation('common');
-  const count = useApprovalsWaiting();
+  const navigate = useNavigate();
+  const count = useApprovalsWaiting().data ?? 0;
   return (
     <IconButton
       icon="clipboard"
       variant="ghost"
       label={count > 0 ? t('approvalsCount', { count }) : t('noApprovals')}
+      onPress={() => {
+        void navigate('/approvals');
+      }}
     />
   );
 }
