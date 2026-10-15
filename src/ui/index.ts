@@ -66,6 +66,8 @@ export {
   type TimeInputProps,
 } from './DatePickers';
 export { FileUpload, type FileUploadProps, type UploadFile } from './FileUpload';
+export { type GeoMapProps, type GeoPoint } from './GeoMap';
+export { LazyGeoMap } from './LazyGeoMap';
 
 // ---- Feedback and overlays (F0.05) ------------------------------------------------------------------------
 export { Drawer, type DrawerProps, Modal, type ModalProps, OverlayTrigger } from './Modal';

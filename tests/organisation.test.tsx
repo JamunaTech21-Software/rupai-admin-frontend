@@ -14,6 +14,7 @@ import { authMocks, MOCK_PASSWORD, resetMockSession } from '@/lib/mocking/contra
 
 import { axeViolations } from './axe';
 import { server } from './msw/server';
+import { openSidebarGroup } from './sidebar';
 
 /** P1.07 (RUP-149): organisation settings, estates with divisions and sections, and fields. */
 
@@ -48,10 +49,12 @@ describe('estates', () => {
     const table = await screen.findByRole('table', { name: 'Estates' });
     expect(await within(table).findByRole('link', { name: 'Rupai Hills Tea Estate' })).toBeInTheDocument();
     expect(within(table).getByRole('link', { name: 'Jamuna Valley Tea Estate' })).toBeInTheDocument();
-    const nav = screen.getByRole('navigation', { name: 'Main' });
-    for (const name of ['Estates', 'Fields', 'Organisation']) {
-      expect(within(nav).getByRole('link', { name })).toBeInTheDocument();
+    const estate = await openSidebarGroup('Estate Management');
+    for (const name of ['Estates', 'Fields']) {
+      expect(within(estate).getByRole('link', { name })).toBeInTheDocument();
     }
+    const configuration = await openSidebarGroup('Configuration');
+    expect(within(configuration).getByRole('link', { name: 'Organisation' })).toBeInTheDocument();
     expect(await axeViolations(appRoot)).toEqual([]);
   });
 
@@ -62,15 +65,15 @@ describe('estates', () => {
     if (!row) throw new Error('no row');
     expect(within(row).getByText('Not recorded')).toBeInTheDocument();
     // f1 12.500 + f2 8.000 + f3 10.250, added as decimals.
-    expect(await within(row).findByText('30.750 ha')).toBeInTheDocument();
+    expect(await within(row).findByText('30.750 acres')).toBeInTheDocument();
   });
 
-  it('the estate page sums up its fields and divisions', async () => {
+  it('the estate profile shows the overview the server works out, in acres', async () => {
     await openAs('manager', '/estates/e1');
-    const summary = await screen.findByRole('region', { name: 'Estate summary' });
-    expect(await within(summary).findByText('30.750')).toBeInTheDocument();
-    expect(within(summary).getByText('28.750')).toBeInTheDocument();
-    expect(within(summary).getByText('Not recorded')).toBeInTheDocument();
+    const overview = await screen.findByRole('region', { name: 'Estate Overview' });
+    expect(await within(overview).findByText('28.750 acres')).toBeInTheDocument();
+    // No total land area is declared, so the non-tea area is not known either.
+    expect(within(overview).getAllByText('Not declared')).toHaveLength(2);
   });
 
   it('a scoped user sees which estates the list is limited to', async () => {
@@ -107,57 +110,104 @@ describe('estates', () => {
     const district = screen.getByRole('textbox', { name: /^District/ });
     await userEvent.clear(district);
     await userEvent.type(district, 'Sylhet');
-    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
-    expect(await screen.findByText('Estate saved')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText('Estate profile saved')).toBeInTheDocument();
   });
 });
 
 describe('divisions and sections', () => {
-  it('expands a division to its sections and adds a section', async () => {
-    await openAs('manager', '/estates/e1');
-    const structure = await screen.findByRole('region', { name: 'Divisions and sections' });
-    await userEvent.click(await within(structure).findByRole('button', { name: /N · North/ }));
-    expect(await within(structure).findByText('North 1')).toBeInTheDocument();
-    expect(within(structure).getByText('North 2')).toBeInTheDocument();
+  /** The table row whose cells include `text`. */
+  /** Waits for the list to settle: rows are drawn again once every division's sections have loaded. */
+  async function rowOf(table: HTMLElement, text: string) {
+    return waitFor(() => {
+      const row = within(table).getByText(text).closest('tr');
+      if (!row) throw new Error(`no row for ${text}`);
+      return row;
+    });
+  }
 
-    await userEvent.click(within(structure).getByRole('button', { name: 'Add section' }));
+  it('lists the divisions and every section, and adds a section to the chosen division', async () => {
+    await openAs('manager', '/estates/e1/divisions');
+    const tabs = await screen.findByRole('navigation', { name: 'Estate management' });
+    expect(within(tabs).getByRole('link', { name: '2. Division & Section' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    const divisions = await screen.findByRole('table', { name: 'Divisions' });
+    await rowOf(divisions, 'North');
+    const sections = await screen.findByRole('table', { name: 'Sections' });
+    await within(sections).findByText('North 1');
+    await within(sections).findByText('North 2');
+
+    // A section is added to the division chosen in the filter.
+    expect(screen.queryByRole('button', { name: 'Add section' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Division$/ }));
+    await userEvent.click(await screen.findByRole('option', { name: 'N · North' }));
+    expect(await screen.findByRole('heading', { name: 'Section List (North)' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Add section' }));
     const dialog = await screen.findByRole('dialog', { name: 'Add section to North' });
     await userEvent.type(within(dialog).getByRole('textbox', { name: /^Code/ }), 'N3');
     await userEvent.type(within(dialog).getByRole('textbox', { name: /^Name/ }), 'North 3');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
-    expect(await within(structure).findByText('North 3')).toBeInTheDocument();
+    await within(sections).findByText('North 3');
+
+    const summary = screen.getByRole('region', { name: 'Division & Section Summary' });
+    expect(within(summary).getByText('Total sections')).toBeInTheDocument();
+    expect(await axeViolations(appRoot)).toEqual([]);
+  });
+
+  it('filters the sections by name', async () => {
+    await openAs('manager', '/estates/e1/divisions');
+    const sections = await screen.findByRole('table', { name: 'Sections' });
+    await within(sections).findByText('North 1');
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Search section' }), 'South');
+    expect(within(sections).queryByText('North 1')).not.toBeInTheDocument();
+    expect(within(sections).getByText('South 1')).toBeInTheDocument();
   });
 
   it('deleting a division with sections is refused: deactivate instead', async () => {
-    await openAs('manager', '/estates/e1');
-    const structure = await screen.findByRole('region', { name: 'Divisions and sections' });
-    await userEvent.click(await within(structure).findByRole('button', { name: /N · North/ }));
-    await within(structure).findByText('North 1');
-    // The division's own Delete is the first one in its panel (the sections' come after).
-    const [divisionDelete] = within(structure).getAllByRole('button', { name: 'Delete' });
-    if (!divisionDelete) throw new Error('no Delete button');
-    await userEvent.click(divisionDelete);
+    await openAs('manager', '/estates/e1/divisions');
+    const divisions = await screen.findByRole('table', { name: 'Divisions' });
+    await userEvent.click(within(await rowOf(divisions, 'North')).getByRole('button', { name: 'Delete' }));
     const confirm = await screen.findByRole('alertdialog', { name: 'Delete North?' });
     await userEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
     expect(await screen.findByText(/Deactivate it instead/)).toBeInTheDocument();
   });
 
   it('deletes an empty division', async () => {
-    await openAs('manager', '/estates/e2');
-    const structure = await screen.findByRole('region', { name: 'Divisions and sections' });
-    await userEvent.click(await within(structure).findByRole('button', { name: /EMPTY · Empty division/ }));
-    await within(structure).findByText('No sections in this division yet.');
-    await userEvent.click(within(structure).getByRole('button', { name: 'Delete' }));
+    await openAs('manager', '/estates/e2/divisions');
+    const divisions = await screen.findByRole('table', { name: 'Divisions' });
+    await userEvent.click(
+      within(await rowOf(divisions, 'Empty division')).getByRole('button', { name: 'Delete' }),
+    );
     await userEvent.click(
       within(await screen.findByRole('alertdialog', { name: 'Delete Empty division?' })).getByRole('button', {
         name: 'Delete',
       }),
     );
     await waitFor(() => {
-      expect(
-        within(structure).queryByRole('button', { name: /EMPTY · Empty division/ }),
-      ).not.toBeInTheDocument();
+      expect(within(divisions).queryByText('Empty division')).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('fields of an estate', () => {
+  it("lists the estate's fields and shows the chosen one's details", async () => {
+    await openAs('manager', '/estates/e1/fields');
+    const table = await screen.findByRole('table', { name: 'Fields / blocks' });
+    // Settled once the section names are in: the rows are drawn again when they load.
+    await within(table).findAllByText('North 1 · North', { exact: false });
+    const first = (await within(table).findAllByRole('button', { name: /^Details of / }))[0];
+    if (!first) throw new Error('no fields');
+    const name = (first.getAttribute('aria-label') ?? '').replace('Details of ', '');
+    await userEvent.click(first);
+    const details = await screen.findByRole('region', { name: `Field / Block Details (${name})` });
+    expect(within(details).getByRole('link', { name: 'Open field' })).toHaveAttribute(
+      'href',
+      expect.stringMatching(/^\/fields\//),
+    );
+    expect(screen.getByRole('region', { name: 'Field / Block Summary' })).toBeInTheDocument();
+    expect(await axeViolations(appRoot)).toEqual([]);
   });
 });
 
@@ -169,7 +219,7 @@ describe('fields', () => {
     if (!row) throw new Error('no row');
     expect(await within(row).findByText('N1 · North 1')).toBeInTheDocument();
     expect(within(row).getByText('N · North')).toBeInTheDocument();
-    expect(within(row).getByText('11.750 ha')).toBeInTheDocument();
+    expect(within(row).getByText('11.750 acres')).toBeInTheDocument();
   });
 
   it('filters fields by estate', async () => {

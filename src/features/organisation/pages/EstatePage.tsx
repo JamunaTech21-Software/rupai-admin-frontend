@@ -1,18 +1,24 @@
 import { useState } from 'react';
+import { useWatch } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router';
 import { z } from 'zod';
 
+import { AttachmentsPanel } from '@/features/documents';
 import { PageError, PageLoading, PermissionNotice, RefusalDialog } from '@/features/system';
 import { usePermission } from '@/lib/auth';
 import { errorBehaviour, isApiError } from '@/lib/errors';
-import { applyServerErrors, useFormField, useZodForm } from '@/lib/forms';
+import { applyServerErrors, type FieldBinding, useFormField, useZodForm } from '@/lib/forms';
 import { useTranslation } from '@/lib/i18n';
+import { lookupLabel, lookupOption, lookupText, useActiveLookups } from '@/lib/lookups';
+import { Dec } from '@/lib/money';
 import {
   Button,
-  ButtonLink,
   Card,
-  DatePicker,
+  Checkbox,
+  CheckboxGroup,
   Input,
+  LazyGeoMap,
+  NumberInput,
   PageHeader,
   Select,
   Stack,
@@ -20,119 +26,311 @@ import {
   toast,
 } from '@/ui';
 
+import {
+  type EstateContact,
+  KEY_PEOPLE,
+  type KeyPerson,
+  type KeyPersonInput,
+  useEstateContacts,
+  useEstateSummary,
+  useRemoveKeyPerson,
+  useSaveKeyPerson,
+} from '../api/estateProfile';
 import { type EstateInput, useCreateEstate, useEstate, useUpdateEstate } from '../api/hierarchy';
-import { type Estate, NODE_CODE, OWNERSHIP_TYPES, PHONE } from '../api/schemas';
-import { EstateStructure } from '../components/EstateStructure';
-import { EstateSummary } from '../components/EstateSummary';
-import { NodeLifecycle } from '../components/NodeLifecycle';
+import { ESTATE_CATEGORIES, ESTATE_TYPES, type Estate, NODE_CODE, PHONE } from '../api/schemas';
 import { AreaInput } from '../components/AreaInput';
+import { EstateOverview } from '../components/EstateOverview';
+import { EstatePhotos } from '../components/EstatePhotos';
+import { EstateTabs } from '../components/EstateTabs';
+import { NodeLifecycle } from '../components/NodeLifecycle';
+
+/** Stands for "not recorded" in a Select, whose options need an id. */
+const NONE = 'none';
+const COORDINATE = /^-?\d{1,3}(\.\d{1,6})?$/;
+const WEBSITE = /^https?:\/\/\S+\.\S+$/i;
 
 const blankToNull = (value: string) => (value.trim() === '' ? null : value.trim());
-const todayIso = () => new Date().toISOString().slice(0, 10);
+const thisYear = () => new Date().getFullYear();
 
-/** Organisation → Estates → one estate (or a new one): its details, then its divisions and sections. */
+interface PersonValues {
+  contact_name: string;
+  designation: string;
+  phone: string;
+  email: string;
+}
+const emptyPerson: PersonValues = { contact_name: '', designation: '', phone: '', email: '' };
+const isBlank = (person: PersonValues) =>
+  [person.contact_name, person.designation, person.phone, person.email].every((value) => value.trim() === '');
+const personOf = (contact: EstateContact | null): PersonValues =>
+  contact
+    ? {
+        contact_name: contact.contact_name,
+        designation: contact.designation ?? '',
+        phone: contact.phone ?? '',
+        email: contact.email ?? '',
+      }
+    : emptyPerson;
+const personInput = (person: PersonValues): KeyPersonInput => ({
+  contact_name: person.contact_name.trim(),
+  designation: blankToNull(person.designation),
+  phone: blankToNull(person.phone),
+  email: blankToNull(person.email),
+});
+
+/** The active Estate Manager and Assistant Manager among the estate's contacts. */
+function keyPeople(contacts: readonly EstateContact[]): Record<KeyPerson, EstateContact | null> {
+  const find = (role: KeyPerson) =>
+    contacts.find((c) => c.contact_type === role && c.status === 'active') ?? null;
+  return { estate_manager: find('estate_manager'), assistant_manager: find('assistant_manager') };
+}
+
+/** Estate Management → Estate Profile (R.2): /estates/:id, or a new estate at /estates/new. */
 export function EstatePage() {
   const { id } = useParams();
-  if (id === undefined) return <EstateForm estate={null} />;
+  if (id === undefined) return <EstateProfile estate={null} contacts={[]} />;
   return <ExistingEstate id={id} />;
 }
 
 function ExistingEstate({ id }: { readonly id: string }) {
-  const query = useEstate(id);
-  if (query.isPending) return <PageLoading />;
-  if (query.isError) return <PageError error={query.error} onRetry={() => void query.refetch()} />;
-  return <EstateForm key={`${query.data.id}-${String(query.data.version)}`} estate={query.data} />;
+  const estate = useEstate(id);
+  const contacts = useEstateContacts(id);
+  if (estate.isPending || contacts.isPending) return <PageLoading />;
+  if (estate.isError) return <PageError error={estate.error} onRetry={() => void estate.refetch()} />;
+  if (contacts.isError) return <PageError error={contacts.error} onRetry={() => void contacts.refetch()} />;
+  const people = keyPeople(contacts.data);
+  return (
+    <EstateProfile
+      // A fresh form whenever the estate or its key people change on the server.
+      key={[estate.data.version, people.estate_manager?.version, people.assistant_manager?.version].join('-')}
+      estate={estate.data}
+      contacts={contacts.data}
+    />
+  );
 }
 
-function EstateForm({ estate }: { readonly estate: Estate | null }) {
+function EstateProfile({
+  estate,
+  contacts,
+}: {
+  readonly estate: Estate | null;
+  readonly contacts: readonly EstateContact[];
+}) {
   const { t } = useTranslation('org');
   const navigate = useNavigate();
   const isNew = estate === null;
   const canEdit = usePermission(isNew ? 'estate.create' : 'estate.edit');
-  const canDelete = usePermission('estate.delete');
   const canEditExisting = usePermission('estate.edit');
+  const canDelete = usePermission('estate.delete');
+  const canReadLookups = usePermission('lookup.view');
   const create = useCreateEstate();
-  const update = useUpdateEstate(estate ?? ({ id: '', version: 0 } as Estate));
+  const update = useUpdateEstate(estate ?? { id: '', version: 0, name: '' });
+  const savePerson = useSaveKeyPerson(estate?.id ?? '');
+  const removePerson = useRemoveKeyPerson(estate?.id ?? '');
+  const summary = useEstateSummary(estate?.id ?? '');
+  const countries = useActiveLookups('country', canReadLookups);
+  const amenityRows = useActiveLookups('amenity', canReadLookups);
   const [refusal, setRefusal] = useState<unknown>(null);
+  const people = keyPeople(contacts);
 
-  const schema = z.object({
-    code: z.string().trim().regex(NODE_CODE, t('validation.codeFormat')),
-    name: z
-      .string()
-      .trim()
-      .min(1, t('validation.required', { field: t('estate.name').toLowerCase() }))
-      .max(150),
-    location: z.string().trim().max(200),
-    address_line1: z.string().trim().max(200),
-    district: z.string().trim().max(100),
-    total_area: z.string().nullable(),
+  const person = z.object({
+    contact_name: z.string().trim().max(150),
+    designation: z.string().trim().max(100),
     phone: z.union([z.literal(''), z.string().trim().regex(PHONE, t('validation.phone'))]),
     email: z.union([z.literal(''), z.email(t('validation.email')).max(150)]),
-    established_on: z
-      .string()
-      .nullable()
-      .refine((date) => date === null || date <= todayIso(), t('validation.notFuture')),
-    ownership_type: z.string(),
-    remarks: z.string().trim().max(500),
   });
-  const form = useZodForm(schema, {
-    defaultValues: {
-      code: estate?.code ?? '',
-      name: estate?.name ?? '',
-      location: estate?.location ?? '',
-      address_line1: estate?.address_line1 ?? '',
-      district: estate?.district ?? '',
-      total_area: estate?.total_area ?? null,
-      phone: estate?.phone ?? '',
-      email: estate?.email ?? '',
-      established_on: estate?.established_on ?? null,
-      ownership_type: estate?.ownership_type ?? 'none',
-      remarks: estate?.remarks ?? '',
+  const schema = z
+    .object({
+      code: z.string().trim().regex(NODE_CODE, t('validation.codeFormat')),
+      name: z
+        .string()
+        .trim()
+        .min(1, t('validation.required', { field: t('estate.name').toLowerCase() }))
+        .max(150),
+      established_year: z
+        .number()
+        .int(t('profile.yearRange', { max: thisYear() }))
+        .min(1800, t('profile.yearRange', { max: thisYear() }))
+        .max(thisYear(), t('profile.yearRange', { max: thisYear() }))
+        .nullable(),
+      owner_name: z.string().trim().max(150),
+      estate_type: z.string(),
+      estate_category: z.string(),
+      address_line1: z.string().trim().max(200),
+      police_station: z.string().trim().max(100),
+      district: z.string().trim().max(100),
+      admin_division: z.string().trim().max(100),
+      country_id: z.string(),
+      postal_code: z.string().trim().max(20),
+      phone: z.union([z.literal(''), z.string().trim().regex(PHONE, t('validation.phone'))]),
+      email: z.union([z.literal(''), z.email(t('validation.email')).max(150)]),
+      website: z.union([
+        z.literal(''),
+        z.string().trim().max(150).regex(WEBSITE, t('profile.websiteFormat')),
+      ]),
+      total_area: z.string().nullable(),
+      amenity_ids: z.array(z.string()),
+      other_amenities: z.string().trim().max(300),
+      latitude: z.string().trim(),
+      longitude: z.string().trim(),
+      description: z.string().trim().max(4000),
+      people: z.object({ estate_manager: person, assistant_manager: person }),
+    })
+    .superRefine((values, ctx) => {
+      const issue = (path: (string | number)[], message: string) => {
+        ctx.addIssue({ code: 'custom', path, message });
+      };
+      for (const [key, limit, range] of [
+        ['latitude', 90, 'profile.latitudeRange'],
+        ['longitude', 180, 'profile.longitudeRange'],
+      ] as const) {
+        const value = values[key];
+        if (value === '') continue;
+        if (!COORDINATE.test(value)) issue([key], t('profile.coordinateFormat'));
+        else if (new Dec(value).abs().gt(limit)) issue([key], t(range));
+      }
+      if ((values.latitude === '') !== (values.longitude === ''))
+        issue([values.latitude === '' ? 'latitude' : 'longitude'], t('profile.bothCoordinates'));
+      for (const role of KEY_PEOPLE) {
+        const p = values.people[role];
+        if (!isBlank(p) && p.contact_name.trim() === '')
+          issue(['people', role, 'contact_name'], t('profile.contactNameRequired'));
+      }
+    });
+
+  const defaults = {
+    code: estate?.code ?? '',
+    name: estate?.name ?? '',
+    established_year: estate?.established_year ?? null,
+    owner_name: estate?.owner_name ?? '',
+    estate_type: estate?.estate_type ?? NONE,
+    estate_category: estate?.estate_category ?? NONE,
+    address_line1: estate?.address_line1 ?? '',
+    police_station: estate?.police_station ?? '',
+    district: estate?.district ?? '',
+    admin_division: estate?.admin_division ?? '',
+    country_id: estate?.country_id ?? '',
+    postal_code: estate?.postal_code ?? '',
+    phone: estate?.phone ?? '',
+    email: estate?.email ?? '',
+    website: estate?.website ?? '',
+    total_area: estate?.total_area ?? null,
+    amenity_ids: (estate?.amenities ?? []).map((a) => a.id),
+    other_amenities: estate?.other_amenities ?? '',
+    latitude: estate?.latitude ?? '',
+    longitude: estate?.longitude ?? '',
+    description: estate?.description ?? '',
+    people: {
+      estate_manager: personOf(people.estate_manager),
+      assistant_manager: personOf(people.assistant_manager),
     },
-  });
+  };
+  const form = useZodForm(schema, { defaultValues: defaults });
   const bind = {
     code: useFormField(form.control, 'code'),
     name: useFormField(form.control, 'name'),
-    location: useFormField(form.control, 'location'),
+    established_year: useFormField(form.control, 'established_year'),
+    owner_name: useFormField(form.control, 'owner_name'),
+    estate_type: useFormField(form.control, 'estate_type'),
+    estate_category: useFormField(form.control, 'estate_category'),
     address_line1: useFormField(form.control, 'address_line1'),
+    police_station: useFormField(form.control, 'police_station'),
     district: useFormField(form.control, 'district'),
-    total_area: useFormField(form.control, 'total_area'),
+    admin_division: useFormField(form.control, 'admin_division'),
+    country_id: useFormField(form.control, 'country_id'),
+    postal_code: useFormField(form.control, 'postal_code'),
     phone: useFormField(form.control, 'phone'),
     email: useFormField(form.control, 'email'),
-    established_on: useFormField(form.control, 'established_on'),
-    ownership_type: useFormField(form.control, 'ownership_type'),
-    remarks: useFormField(form.control, 'remarks'),
+    website: useFormField(form.control, 'website'),
+    total_area: useFormField(form.control, 'total_area'),
+    amenity_ids: useFormField(form.control, 'amenity_ids'),
+    other_amenities: useFormField(form.control, 'other_amenities'),
+    latitude: useFormField(form.control, 'latitude'),
+    longitude: useFormField(form.control, 'longitude'),
+    description: useFormField(form.control, 'description'),
+  };
+  const personBind = {
+    estate_manager: {
+      contact_name: useFormField(form.control, 'people.estate_manager.contact_name'),
+      designation: useFormField(form.control, 'people.estate_manager.designation'),
+      phone: useFormField(form.control, 'people.estate_manager.phone'),
+      email: useFormField(form.control, 'people.estate_manager.email'),
+    },
+    assistant_manager: {
+      contact_name: useFormField(form.control, 'people.assistant_manager.contact_name'),
+      designation: useFormField(form.control, 'people.assistant_manager.designation'),
+      phone: useFormField(form.control, 'people.assistant_manager.phone'),
+      email: useFormField(form.control, 'people.assistant_manager.email'),
+    },
   };
   const readOnly = { isReadOnly: !canEdit };
+  const [latitude, longitude] = useWatch({ control: form.control, name: ['latitude', 'longitude'] });
+  const point =
+    COORDINATE.test(latitude) && COORDINATE.test(longitude)
+      ? { lat: new Dec(latitude).toNumber(), lng: new Dec(longitude).toNumber() }
+      : null;
 
   const submit = form.handleSubmit(async (values) => {
     const input: EstateInput = {
       code: values.code.trim(),
       name: values.name.trim(),
-      location: blankToNull(values.location),
       address_line1: blankToNull(values.address_line1),
       district: blankToNull(values.district),
       total_area: values.total_area,
       phone: blankToNull(values.phone),
       email: blankToNull(values.email),
-      established_on: values.established_on,
-      ownership_type:
-        values.ownership_type === 'none' ? null : (values.ownership_type as (typeof OWNERSHIP_TYPES)[number]),
-      remarks: blankToNull(values.remarks),
+      established_year: values.established_year,
+      owner_name: blankToNull(values.owner_name),
+      estate_type: ESTATE_TYPES.find((type) => type === values.estate_type) ?? null,
+      estate_category: ESTATE_CATEGORIES.find((category) => category === values.estate_category) ?? null,
+      police_station: blankToNull(values.police_station),
+      admin_division: blankToNull(values.admin_division),
+      country_id: values.country_id === '' ? null : values.country_id,
+      postal_code: blankToNull(values.postal_code),
+      website: blankToNull(values.website),
+      latitude: blankToNull(values.latitude),
+      longitude: blankToNull(values.longitude),
+      description: blankToNull(values.description),
+      amenity_ids: values.amenity_ids,
+      other_amenities: blankToNull(values.other_amenities),
     };
     try {
       if (isNew) {
         const created = await create.mutateAsync(input);
         toast.success(t('estate.created', { name: created.name }));
         void navigate(`/estates/${created.id}`, { replace: true });
-      } else {
-        await update.mutateAsync(input);
-        toast.success(t('estate.saved'));
+        return;
       }
+      await update.mutateAsync(input);
+      // Then the key people that changed: each its own request, so a refusal names the person.
+      for (const role of KEY_PEOPLE) {
+        const before = people[role];
+        const now = values.people[role];
+        const unchanged = JSON.stringify(personOf(before)) === JSON.stringify({ ...now });
+        if (unchanged) continue;
+        try {
+          if (isBlank(now)) {
+            if (before) await removePerson.mutateAsync(before);
+          } else await savePerson.mutateAsync({ role, existing: before, input: personInput(now) });
+        } catch (error) {
+          if (errorBehaviour(error) === 'field-errors' && isApiError(error)) {
+            const details = error.fieldErrors.map((d) => ({
+              ...d,
+              field: `people.${role}.${d.field ?? ''}`,
+            }));
+            if (applyServerErrors(form, details).length === 0) return;
+          }
+          throw error;
+        }
+      }
+      toast.success(t('profile.saved'));
     } catch (error) {
       if (errorBehaviour(error) === 'conflict') return;
       if (errorBehaviour(error) === 'field-errors' && isApiError(error)) {
-        if (applyServerErrors(form, error.fieldErrors).length === 0) return;
+        // amenity_ids.0 and the like belong to the facilities list.
+        const details = error.fieldErrors.map((d) =>
+          d.field?.startsWith('amenity_ids') ? { ...d, field: 'amenity_ids' } : d,
+        );
+        if (applyServerErrors(form, details).length === 0) return;
       }
       setRefusal(error);
     }
@@ -153,6 +351,181 @@ function EstateForm({ estate }: { readonly estate: Estate | null }) {
       }
     : null;
 
+  const select = (
+    name: 'estate_type' | 'estate_category',
+    label: string,
+    values: readonly string[],
+    labelOf: (value: string) => string,
+  ) => (
+    <Select
+      label={label}
+      isDisabled={!canEdit}
+      value={bind[name].value}
+      onChange={(value) => {
+        if (value) bind[name].onChange(value);
+      }}
+      options={[
+        { id: NONE, label: t('profile.notRecorded') },
+        ...values.map((value) => ({ id: value, label: labelOf(value) })),
+      ]}
+    />
+  );
+
+  // The facility list, plus any the estate has that the list no longer offers (or that the user cannot read).
+  const amenityOptions = [
+    ...(amenityRows.data ?? []).map((row) => ({
+      id: row.id,
+      label: lookupText(row, 'name') || lookupLabel(row),
+    })),
+    ...(estate?.amenities ?? [])
+      .filter((a) => !(amenityRows.data ?? []).some((row) => row.id === a.id))
+      .map((a) => ({ id: a.id, label: a.name })),
+  ];
+  const countryOptions = (countries.data ?? []).map(lookupOption);
+  const hasFactory = (summary.data?.factory_count ?? 0) > 0;
+
+  const basic = (
+    <Card title={t('profile.basic')} headingLevel={2}>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Input label={t('estate.name')} isRequired autoComplete="off" {...bind.name} {...readOnly} />
+        <Input
+          label={t('estate.code')}
+          hint={t('estate.codeHint')}
+          isRequired
+          autoComplete="off"
+          {...bind.code}
+          {...readOnly}
+        />
+        <NumberInput
+          label={t('profile.establishedYear')}
+          formatOptions={{ useGrouping: false, maximumFractionDigits: 0 }}
+          minValue={1800}
+          maxValue={thisYear()}
+          {...bind.established_year}
+          {...readOnly}
+        />
+        <Input label={t('profile.ownerName')} {...bind.owner_name} {...readOnly} />
+        {select('estate_type', t('profile.estateType'), ESTATE_TYPES, (v) =>
+          t(`profile.types.${v as (typeof ESTATE_TYPES)[number]}`),
+        )}
+        {select('estate_category', t('profile.estateCategory'), ESTATE_CATEGORIES, (v) =>
+          t(`profile.categories.${v as (typeof ESTATE_CATEGORIES)[number]}`),
+        )}
+        <Input label={t('profile.address')} className="md:col-span-2" {...bind.address_line1} {...readOnly} />
+        <Input label={t('profile.policeStation')} {...bind.police_station} {...readOnly} />
+        <Input label={t('profile.district')} {...bind.district} {...readOnly} />
+        <Input
+          label={t('profile.adminDivision')}
+          hint={t('profile.adminDivisionHint')}
+          {...bind.admin_division}
+          {...readOnly}
+        />
+        <Select
+          label={t('profile.country')}
+          isDisabled={!canEdit}
+          value={bind.country_id.value === '' ? NONE : bind.country_id.value}
+          onChange={(value) => {
+            bind.country_id.onChange(value === null || value === NONE ? '' : value);
+          }}
+          options={[
+            { id: NONE, label: t('profile.notRecorded') },
+            ...(estate?.country_id && !countryOptions.some((o) => o.id === estate.country_id)
+              ? [{ id: estate.country_id, label: `#${estate.country_id}` }]
+              : []),
+            ...countryOptions,
+          ]}
+        />
+        <Input label={t('profile.postalCode')} {...bind.postal_code} {...readOnly} />
+        <Input label={t('profile.phone')} type="tel" {...bind.phone} {...readOnly} />
+        <Input label={t('profile.email')} type="email" {...bind.email} {...readOnly} />
+        <Input label={t('profile.website')} type="url" {...bind.website} {...readOnly} />
+        <AreaInput
+          label={t('profile.totalArea')}
+          hint={t('profile.totalAreaHint')}
+          {...bind.total_area}
+          {...readOnly}
+        />
+      </div>
+    </Card>
+  );
+
+  const managers = (
+    <Card title={t('profile.managers')} headingLevel={2}>
+      {isNew ? (
+        <p className="text-sm text-fg-muted">{t('profile.managersNew')}</p>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {KEY_PEOPLE.map((role) => (
+            <PersonFields key={role} role={role} bind={personBind[role]} isReadOnly={!canEdit} />
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+
+  const facilities = (
+    <Card title={t('profile.facilities')} headingLevel={2}>
+      <div className="flex flex-col gap-4">
+        {estate ? (
+          <Checkbox isSelected={hasFactory} isDisabled>
+            <span className="flex flex-col">
+              <span>{t('profile.factory')}</span>
+              <span className="text-xs text-fg-muted">{t('profile.factoryHint')}</span>
+            </span>
+          </Checkbox>
+        ) : null}
+        <CheckboxGroup
+          label={t('profile.facilities')}
+          hideLabel
+          isDisabled={!canEdit}
+          options={amenityOptions}
+          value={bind.amenity_ids.value}
+          onChange={bind.amenity_ids.onChange}
+          {...(bind.amenity_ids.error ? { error: bind.amenity_ids.error } : {})}
+          className="[&_[role=group]]:grid [&_[role=group]]:grid-cols-1 [&_[role=group]]:gap-2 sm:[&_[role=group]]:grid-cols-2"
+        />
+        <Input label={t('profile.otherAmenities')} {...bind.other_amenities} {...readOnly} />
+      </div>
+    </Card>
+  );
+
+  const geo = (
+    <Card title={t('profile.geo')} headingLevel={2}>
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input label={t('profile.latitude')} inputMode="decimal" {...bind.latitude} {...readOnly} />
+          <Input label={t('profile.longitude')} inputMode="decimal" {...bind.longitude} {...readOnly} />
+        </div>
+        <LazyGeoMap
+          label={t('profile.mapLabel', { name: estate?.name ?? t('estate.newTitle') })}
+          point={point}
+          {...(canEdit
+            ? {
+                onPick: ({ lat, lng }) => {
+                  form.setValue('latitude', lat.toFixed(6), { shouldDirty: true, shouldValidate: true });
+                  form.setValue('longitude', lng.toFixed(6), { shouldDirty: true, shouldValidate: true });
+                },
+              }
+            : {})}
+        />
+        {canEdit ? <p className="text-sm text-fg-muted">{t('profile.mapHint')}</p> : null}
+      </div>
+    </Card>
+  );
+
+  const description = (
+    <Card title={t('profile.description')} headingLevel={2}>
+      <Textarea
+        label={t('profile.description')}
+        hideLabel
+        rows={5}
+        maxLength={4000}
+        {...bind.description}
+        {...readOnly}
+      />
+    </Card>
+  );
+
   return (
     <Stack gap={6}>
       <PageHeader
@@ -169,27 +542,22 @@ function EstateForm({ estate }: { readonly estate: Estate | null }) {
         breadcrumbs={[{ label: t('estate.backToList'), href: '/estates' }, { label: title }]}
         actions={
           estate && lifecycleText ? (
-            <>
-              <ButtonLink href={`/fields?filter[estate_id]=${estate.id}`} variant="secondary">
-                {t('estate.fieldsLink')}
-              </ButtonLink>
-              <NodeLifecycle
-                path="estates"
-                node={estate}
-                subject={estate.name}
-                text={lifecycleText}
-                canEdit={canEditExisting}
-                canDelete={canDelete}
-                onDeleted={() => {
-                  void navigate('/estates', { replace: true });
-                }}
-                onRefused={setRefusal}
-              />
-            </>
+            <NodeLifecycle
+              path="estates"
+              node={estate}
+              subject={estate.name}
+              text={lifecycleText}
+              canEdit={canEditExisting}
+              canDelete={canDelete}
+              onDeleted={() => {
+                void navigate('/estates', { replace: true });
+              }}
+              onRefused={setRefusal}
+            />
           ) : undefined
         }
       />
-      {estate ? <EstateSummary estate={estate} /> : null}
+      {estate ? <EstateTabs estateId={estate.id} current="profile" /> : null}
       {!canEdit ? <PermissionNotice /> : null}
       <form
         noValidate
@@ -198,77 +566,65 @@ function EstateForm({ estate }: { readonly estate: Estate | null }) {
           void submit(event);
         }}
       >
-        <Card title={t('estate.details')} headingLevel={2}>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Input
-              label={t('estate.code')}
-              hint={t('estate.codeHint')}
-              isRequired
-              autoComplete="off"
-              {...bind.code}
-              {...readOnly}
-            />
-            <Input label={t('estate.name')} isRequired autoComplete="off" {...bind.name} {...readOnly} />
-            <Input label={t('estate.location')} {...bind.location} {...readOnly} />
-            <Input label={t('estate.district')} {...bind.district} {...readOnly} />
-            <Input
-              label={t('estate.addressLine1')}
-              className="md:col-span-2"
-              {...bind.address_line1}
-              {...readOnly}
-            />
-            <AreaInput
-              label={t('estate.totalArea')}
-              hint={t('estate.totalAreaHint')}
-              {...bind.total_area}
-              {...readOnly}
-            />
-            <Select
-              label={t('estate.ownershipType')}
-              isDisabled={!canEdit}
-              value={bind.ownership_type.value}
-              onChange={(value) => {
-                if (value) bind.ownership_type.onChange(value);
-              }}
-              options={[
-                { id: 'none', label: t('estate.ownershipNone') },
-                ...OWNERSHIP_TYPES.map((type) => ({ id: type, label: t(`ownership.${type}`) })),
-              ]}
-            />
-            <DatePicker
-              label={t('estate.establishedOn')}
-              isReadOnly={!canEdit}
-              value={bind.established_on.value}
-              onChange={(date) => {
-                bind.established_on.onChange(date);
-              }}
-              {...(bind.established_on.error ? { error: bind.established_on.error } : {})}
-            />
-            <Input label={t('estate.phone')} type="tel" {...bind.phone} {...readOnly} />
-            <Input label={t('estate.email')} type="email" {...bind.email} {...readOnly} />
-            <Textarea
-              label={t('estate.remarks')}
-              rows={2}
-              maxLength={500}
-              className="md:col-span-2"
-              {...bind.remarks}
-              {...readOnly}
-            />
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+          <div className="flex min-w-0 flex-col gap-6 xl:col-span-7">
+            {basic}
+            {managers}
+            {facilities}
+            {estate ? (
+              <AttachmentsPanel
+                owner={{ path: '/estates', id: estate.id }}
+                module="estate"
+                // Photographs have their own gallery above.
+                excludeTypes={['PHOTOGRAPH']}
+              />
+            ) : null}
           </div>
-        </Card>
+          <div className="flex min-w-0 flex-col gap-6 xl:col-span-5">
+            {estate ? (
+              <EstatePhotos
+                estateId={estate.id}
+                estateName={estate.name}
+                canEdit={canEditExisting}
+                onRefused={setRefusal}
+              />
+            ) : null}
+            {estate ? <EstateOverview estateId={estate.id} /> : null}
+            {geo}
+            {description}
+          </div>
+        </div>
         {canEdit ? (
-          <div className="flex justify-end">
+          <div className="flex flex-col-reverse gap-3 rounded-lg border border-line bg-surface p-4 shadow-sm sm:flex-row sm:justify-end">
+            <Button
+              variant="secondary"
+              className="w-full sm:w-auto"
+              onPress={() => {
+                void navigate('/estates');
+              }}
+            >
+              {t('profile.cancel')}
+            </Button>
+            <Button
+              variant="secondary"
+              iconStart="refresh"
+              className="w-full sm:w-auto"
+              onPress={() => {
+                form.reset(defaults);
+              }}
+            >
+              {t('profile.reset')}
+            </Button>
             <Button
               type="submit"
-              isPending={create.isPending || update.isPending}
+              isPending={create.isPending || update.isPending || savePerson.isPending}
               className="w-full sm:w-auto"
             >
-              {isNew ? t('estate.create') : t('actions.save')}
+              {isNew ? t('estate.create') : t('profile.save')}
             </Button>
           </div>
         ) : null}
       </form>
-      {estate ? <EstateStructure estate={estate} onRefused={setRefusal} /> : null}
       <RefusalDialog
         error={refusal}
         onClose={() => {
@@ -276,6 +632,35 @@ function EstateForm({ estate }: { readonly estate: Estate | null }) {
         }}
       />
     </Stack>
+  );
+}
+
+/** One key person's name, designation, mobile and email. */
+function PersonFields({
+  role,
+  bind,
+  isReadOnly,
+}: {
+  readonly role: KeyPerson;
+  readonly bind: Readonly<Record<'contact_name' | 'designation' | 'phone' | 'email', FieldBinding<string>>>;
+  readonly isReadOnly: boolean;
+}) {
+  const { t } = useTranslation('org');
+  return (
+    <fieldset className="rounded-md border border-line p-4">
+      <legend className="px-1 text-sm font-semibold text-heading">{t(`profile.roles.${role}`)}</legend>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Input
+          label={t('profile.contactName')}
+          autoComplete="off"
+          {...bind.contact_name}
+          isReadOnly={isReadOnly}
+        />
+        <Input label={t('profile.designation')} {...bind.designation} isReadOnly={isReadOnly} />
+        <Input label={t('profile.mobile')} type="tel" {...bind.phone} isReadOnly={isReadOnly} />
+        <Input label={t('profile.contactEmail')} type="email" {...bind.email} isReadOnly={isReadOnly} />
+      </div>
+    </fieldset>
   );
 }
 

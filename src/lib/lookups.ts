@@ -32,6 +32,7 @@ export const LOOKUP_TYPES = [
   'adjustment_reason',
   'quality_grade',
   'collection_point_type',
+  'amenity',
   'tea_type',
   'tea_grade',
   'activity_type',

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { z } from 'zod';
 
+import { AttachmentsPanel } from '@/features/documents';
 import { PageError, PageLoading, PermissionNotice, RefusalDialog } from '@/features/system';
 import { usePermission } from '@/lib/auth';
 import { errorBehaviour, isApiError } from '@/lib/errors';
@@ -399,6 +400,7 @@ function FieldForm({ field }: { readonly field: Field | null }) {
           onRefused={setRefusal}
         />
       ) : null}
+      {field ? <AttachmentsPanel owner={{ path: '/fields', id: field.id }} module="field" /> : null}
       <RefusalDialog
         error={refusal}
         onClose={() => {

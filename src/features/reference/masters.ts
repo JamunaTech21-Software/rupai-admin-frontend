@@ -238,6 +238,7 @@ export const MASTER_TYPES: readonly MasterType[] = [
   ),
   common('land_type', 'field'),
   common('collection_point_type', 'field'),
+  common('amenity', 'field'),
 
   // ---- Trade ----
   common('buyer_type', 'trade'),

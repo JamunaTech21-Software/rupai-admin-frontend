@@ -10,6 +10,9 @@ export const organisationRoutes: RouteObject[] = [
 export const estateRoutes: RouteObject[] = [
   { path: 'estates', lazy: () => import('./pages/EstatesPage') },
   { path: 'estates/:id', lazy: () => import('./pages/EstatePage') },
+  /** Estate Management tabs (R.3). */
+  { path: 'estates/:id/divisions', lazy: () => import('./pages/EstateDivisionsPage') },
+  { path: 'estates/:id/fields', lazy: () => import('./pages/EstateFieldsPage') },
 ];
 export const estateCreateRoutes: RouteObject[] = [
   { path: 'estates/new', lazy: () => import('./pages/EstatePage') },

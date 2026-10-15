@@ -11,6 +11,7 @@ import { authMocks, MOCK_PASSWORD, resetMockSession } from '@/lib/mocking/contra
 
 import { axeViolations } from './axe';
 import { server } from './msw/server';
+import { openSidebarGroup } from './sidebar';
 
 /** P1.11 (RUP-213): Admin → Document numbering and Admin → System settings. */
 
@@ -83,7 +84,7 @@ describe('document numbering', () => {
     // The set is the system's: nothing to add.
     expect(screen.queryByRole('button', { name: /^Add/ })).not.toBeInTheDocument();
 
-    const nav = screen.getByRole('navigation', { name: 'Main' });
+    const nav = await openSidebarGroup('Configuration');
     expect(within(nav).getByRole('link', { name: 'Document numbering' })).toBeInTheDocument();
     expect(within(nav).getByRole('link', { name: 'System settings' })).toBeInTheDocument();
     expect(await axeViolations(appRoot)).toEqual([]);

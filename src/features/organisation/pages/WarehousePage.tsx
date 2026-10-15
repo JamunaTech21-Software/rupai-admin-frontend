@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { z } from 'zod';
 
+import { AttachmentsPanel } from '@/features/documents';
 import { PageError, PageLoading } from '@/features/system';
 import { usePermission } from '@/lib/auth';
 import { errorBehaviour, isApiError } from '@/lib/errors';
@@ -132,11 +133,14 @@ function WarehouseEditor({ warehouse }: { readonly warehouse: Warehouse | null }
       onRefused={setRefusal}
       after={
         warehouse ? (
-          <ContactsPanel
-            owner={{ path: 'warehouses', id: warehouse.id }}
-            canEdit={canEditContacts}
-            onRefused={setRefusal}
-          />
+          <>
+            <ContactsPanel
+              owner={{ path: 'warehouses', id: warehouse.id }}
+              canEdit={canEditContacts}
+              onRefused={setRefusal}
+            />
+            <AttachmentsPanel owner={{ path: '/warehouses', id: warehouse.id }} module="warehouse" />
+          </>
         ) : null
       }
     >

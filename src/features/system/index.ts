@@ -4,7 +4,6 @@
  */
 export { EnvironmentBanner } from './components/EnvironmentBanner';
 export { ConflictDialogHost } from './components/ConflictDialogHost';
-export { RunningJobs } from './components/RunningJobs';
 export {
   ForbiddenState,
   NotFoundState,

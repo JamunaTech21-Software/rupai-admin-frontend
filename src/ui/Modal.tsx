@@ -49,9 +49,9 @@ function OverlayBody({
       {...(description ? { 'aria-describedby': descriptionId } : {})}
       className={cx('flex max-h-full flex-col outline-none', className)}
     >
-      <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
+      <div className="flex items-start justify-between gap-4 border-b border-line bg-card-header px-5 py-4 sm:px-6">
         <div className="flex min-w-0 flex-col gap-1">
-          <Heading slot="title" className="text-lg font-semibold text-fg">
+          <Heading slot="title" className="text-lg font-semibold text-heading">
             {title}
           </Heading>
           {description ? (

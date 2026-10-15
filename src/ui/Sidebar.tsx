@@ -41,13 +41,26 @@ function isActive(item: NavItem, path: string): boolean {
   return item.children?.some((child) => isActive(child, path)) ?? false;
 }
 
+// As the design (R.1): 13 px items with muted icons; hover tints green; the current page is solid primary.
 const itemBase = cx(
-  'flex w-full items-center gap-3 rounded-md px-3 text-start text-fg-muted outline-none',
-  'min-h-(--size-touch-target) md:min-h-10',
-  'data-hovered:bg-surface-subtle data-hovered:text-fg',
+  'group flex w-full items-center gap-2.5 rounded-md px-3 text-start text-nav font-medium text-fg-muted outline-none',
+  'transition-colors duration-(--duration-fast)',
+  'min-h-(--size-touch-target) md:min-h-9',
+  'data-hovered:bg-primary-subtle data-hovered:text-primary',
   'data-focus-visible:outline-2 data-focus-visible:-outline-offset-2 data-focus-visible:outline-focus',
 );
-const itemCurrent = 'bg-primary-subtle font-medium text-primary-strong data-hovered:bg-primary-subtle';
+const itemCurrent =
+  'bg-primary text-fg-on-primary shadow-sm data-hovered:bg-primary-hover data-hovered:text-fg-on-primary';
+const iconLook = 'shrink-0 text-fg-subtle group-data-hovered:text-primary';
+const iconCurrent = 'text-fg-on-primary group-data-hovered:text-fg-on-primary';
+/** A page inside a group: smaller, on a rule; the current one is tinted, not solid. */
+const subItem = cx(
+  'flex w-full items-center rounded-md px-2.5 text-start text-xs font-medium text-fg-muted outline-none',
+  'min-h-(--size-touch-target) md:min-h-8',
+  'data-hovered:bg-primary-subtle data-hovered:text-primary',
+  'data-focus-visible:outline-2 data-focus-visible:-outline-offset-2 data-focus-visible:outline-focus',
+);
+const subItemCurrent = 'bg-primary-subtle text-primary-strong';
 
 function Count({ value }: { readonly value: number }) {
   const text = useUiText();
@@ -59,102 +72,131 @@ function Count({ value }: { readonly value: number }) {
   );
 }
 
-function NavEntry({
+function NavLinkEntry({
   item,
   currentPath,
   isCollapsed,
+  isSub,
   onNavigate,
 }: {
   readonly item: NavItem;
   readonly currentPath: string;
   readonly isCollapsed: boolean;
+  readonly isSub: boolean;
   readonly onNavigate: (() => void) | undefined;
 }) {
-  const active = isActive(item, currentPath);
-  const [isOpen, setIsOpen] = useState(active);
-  const label = isCollapsed ? (
-    <span className="sr-only">{item.label}</span>
-  ) : (
-    <span className="truncate">{item.label}</span>
-  );
-  const icon = item.icon ? <Icon name={item.icon} className="shrink-0" /> : null;
-
-  if (item.children && item.children.length > 0 && !isCollapsed) {
-    return (
-      <li>
-        <AriaButton
-          aria-expanded={isOpen}
-          onPress={() => {
-            setIsOpen((open) => !open);
-          }}
-          className={cx(itemBase, active && !isOpen && 'text-primary-strong')}
-        >
-          {icon}
-          {label}
-          <Icon
-            name="chevronRight"
-            size="sm"
-            className={cx(
-              'ms-auto shrink-0 transition-transform motion-reduce:transition-none',
-              isOpen && 'rotate-90',
-            )}
-          />
-        </AriaButton>
-        {isOpen ? (
-          <ul className="ms-5 mt-0.5 flex flex-col gap-0.5 border-s border-line ps-2">
-            {item.children.map((child) => (
-              <NavEntry
-                key={child.id}
-                item={child}
-                currentPath={currentPath}
-                isCollapsed={false}
-                onNavigate={onNavigate}
-              />
-            ))}
-          </ul>
-        ) : null}
-      </li>
-    );
-  }
-
-  const isCurrent = item.href === currentPath;
+  // Marked on its own pages too (a user's detail under Users); aria-current only on the page itself.
+  const isCurrent = isActive(item, currentPath);
   // In the rail a group links to its first child, so every icon still goes somewhere.
   const href = item.href ?? item.children?.[0]?.href;
+  const look = isSub
+    ? cx(subItem, isCurrent && subItemCurrent)
+    : cx(itemBase, isCollapsed && 'justify-center px-0', isCurrent && itemCurrent);
   return (
     <li>
       <AriaLink
         {...(href ? { href } : {})}
-        {...(isCurrent ? { 'aria-current': 'page' as const } : {})}
+        {...(item.href === currentPath ? { 'aria-current': 'page' as const } : {})}
         {...(isCollapsed ? { 'aria-label': item.label } : {})}
         {...(onNavigate ? { onPress: onNavigate } : {})}
-        className={cx(
-          itemBase,
-          isCollapsed && 'justify-center px-0',
-          (isCurrent || (isCollapsed && active)) && itemCurrent,
-        )}
+        className={look}
       >
-        {icon}
-        {label}
+        {item.icon && !isSub ? (
+          <Icon name={item.icon} size="sm" className={cx(iconLook, isCurrent && iconCurrent)} />
+        ) : null}
+        {isCollapsed ? (
+          <span className="sr-only">{item.label}</span>
+        ) : (
+          <span className="flex-1 truncate">{item.label}</span>
+        )}
         {item.badge !== undefined && !isCollapsed ? <Count value={item.badge} /> : null}
       </AriaLink>
     </li>
   );
 }
 
-/** The main navigation (Spec P5 §6.5): sections of links, groups that open, the current page marked. */
+function NavGroup({
+  item,
+  currentPath,
+  isOpen,
+  onToggle,
+  onNavigate,
+}: {
+  readonly item: NavItem;
+  readonly currentPath: string;
+  readonly isOpen: boolean;
+  readonly onToggle: () => void;
+  readonly onNavigate: (() => void) | undefined;
+}) {
+  const active = isActive(item, currentPath);
+  return (
+    <li>
+      <AriaButton aria-expanded={isOpen} onPress={onToggle} className={cx(itemBase, active && itemCurrent)}>
+        {item.icon ? (
+          <Icon name={item.icon} size="sm" className={cx(iconLook, active && iconCurrent)} />
+        ) : null}
+        <span className="flex-1 truncate">{item.label}</span>
+        <Icon
+          name="chevronRight"
+          size="sm"
+          className={cx(
+            'shrink-0 transition-transform duration-(--duration-base) motion-reduce:transition-none',
+            isOpen && 'rotate-90',
+            active ? 'text-fg-on-primary' : 'text-fg-subtle',
+          )}
+        />
+      </AriaButton>
+      {isOpen ? (
+        <ul className="ms-5 mt-0.5 flex flex-col gap-0.5 border-s border-line py-1 ps-3">
+          {(item.children ?? []).map((child) => (
+            <NavLinkEntry
+              key={child.id}
+              item={child}
+              currentPath={currentPath}
+              isCollapsed={false}
+              isSub
+              onNavigate={onNavigate}
+            />
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  );
+}
+
+/** The group holding the current page, which opens by itself. */
+function activeGroupOf(sections: readonly NavSection[], path: string): string | null {
+  for (const section of sections)
+    for (const item of section.items)
+      if (item.children && item.children.length > 0 && isActive(item, path)) return item.id;
+  return null;
+}
+
+/**
+ * The main navigation (Spec P5 §6.5, design R.1): sections of links and groups, one group open at a time (the
+ * one holding the current page opens by itself), the current page marked.
+ */
 export function Sidebar({ sections, currentPath, isCollapsed = false, onNavigate, className }: SidebarProps) {
   const text = useUiText();
+  const activeGroup = activeGroupOf(sections, currentPath);
+  const [open, setOpen] = useState<{ readonly id: string | null; readonly forPath: string }>({
+    id: activeGroup,
+    forPath: currentPath,
+  });
+  // Moving to another page opens that page's group (state adjusted while rendering, not in an effect).
+  if (open.forPath !== currentPath) setOpen({ id: activeGroup ?? open.id, forPath: currentPath });
+
   return (
     <nav
       aria-label={text.mainNavigation}
-      className={cx('flex flex-col gap-4 overflow-y-auto p-3', className)}
+      className={cx('flex flex-col gap-3 overflow-x-hidden overflow-y-auto px-2 py-3', className)}
     >
       {sections.map((section) => (
-        <div key={section.id} className="flex flex-col gap-1">
+        <div key={section.id} className="flex flex-col gap-1.5">
           {section.title ? (
             <h2
               className={cx(
-                'px-3 text-xs font-semibold tracking-wide text-fg-subtle uppercase',
+                'px-3 text-2xs font-semibold tracking-wider text-fg-subtle uppercase',
                 isCollapsed && 'sr-only',
               )}
             >
@@ -162,15 +204,29 @@ export function Sidebar({ sections, currentPath, isCollapsed = false, onNavigate
             </h2>
           ) : null}
           <ul className="flex flex-col gap-0.5">
-            {section.items.map((item) => (
-              <NavEntry
-                key={item.id}
-                item={item}
-                currentPath={currentPath}
-                isCollapsed={isCollapsed}
-                onNavigate={onNavigate}
-              />
-            ))}
+            {section.items.map((item) =>
+              item.children && item.children.length > 0 && !isCollapsed ? (
+                <NavGroup
+                  key={item.id}
+                  item={item}
+                  currentPath={currentPath}
+                  isOpen={open.id === item.id}
+                  onToggle={() => {
+                    setOpen({ id: open.id === item.id ? null : item.id, forPath: currentPath });
+                  }}
+                  onNavigate={onNavigate}
+                />
+              ) : (
+                <NavLinkEntry
+                  key={item.id}
+                  item={item}
+                  currentPath={currentPath}
+                  isCollapsed={isCollapsed}
+                  isSub={false}
+                  onNavigate={onNavigate}
+                />
+              ),
+            )}
           </ul>
         </div>
       ))}

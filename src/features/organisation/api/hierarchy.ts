@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 
 import { api, useIdempotencyKey } from '@/lib/api';
@@ -9,7 +9,9 @@ import {
   type Division,
   DivisionSchema,
   type Estate,
+  type EstateCategory,
   EstateSchema,
+  type EstateType,
   type Field,
   FieldSchema,
   type Organisation,
@@ -150,10 +152,35 @@ export function useEstate(id: string) {
   });
 }
 
-export type EstateInput = Omit<
-  Estate,
-  'id' | 'organisation_id' | 'manager_profile_id' | 'status' | 'version' | 'created_at' | 'updated_at'
->;
+/**
+ * What the estate form sends (R.2). The deprecated established_on and ownership_type are no longer sent; location
+ * and remarks are not on the profile, so a PATCH leaves them as they are.
+ */
+export interface EstateInput {
+  readonly code: string;
+  readonly name: string;
+  readonly address_line1: string | null;
+  readonly district: string | null;
+  /** The declared total land area, in acres. */
+  readonly total_area: string | null;
+  readonly phone: string | null;
+  readonly email: string | null;
+  readonly established_year: number | null;
+  readonly owner_name: string | null;
+  readonly estate_type: EstateType | null;
+  readonly estate_category: EstateCategory | null;
+  readonly police_station: string | null;
+  readonly admin_division: string | null;
+  readonly country_id: string | null;
+  readonly postal_code: string | null;
+  readonly website: string | null;
+  readonly latitude: string | null;
+  readonly longitude: string | null;
+  readonly description: string | null;
+  /** The whole set of ticked facilities, replacing the previous one. */
+  readonly amenity_ids: readonly string[];
+  readonly other_amenities: string | null;
+}
 
 export function useCreateEstate() {
   return useApiMutation({
@@ -163,16 +190,12 @@ export function useCreateEstate() {
   });
 }
 
-export function useUpdateEstate(estate: Estate) {
+/** PATCH: only the profile's fields, so fields the profile does not show keep their values. */
+export function useUpdateEstate(estate: Pick<Estate, 'id' | 'version' | 'name'>) {
   return useApiMutation({
     mutationFn: async (input: EstateInput) =>
-      (
-        await api.put(
-          `/estates/${estate.id}`,
-          { ...input, manager_profile_id: estate.manager_profile_id },
-          { schema: EstateSchema, ifMatch: estate.version },
-        )
-      ).data,
+      (await api.patch(`/estates/${estate.id}`, input, { schema: EstateSchema, ifMatch: estate.version }))
+        .data,
     invalidates: () => [estateKeys.all],
     conflictSubject: () => estate.name,
   });
@@ -209,6 +232,51 @@ export function useSections(divisionId: string) {
         })
       ).data,
     enabled: divisionId !== '',
+  });
+}
+
+/**
+ * Every section of an estate (R.3), one request per division (the API lists sections by division). Shares
+ * useSections' cache, so adding or changing a section refreshes both.
+ */
+export function useEstateSections(divisions: readonly Division[]) {
+  return useQueries({
+    queries: divisions.map((division) => ({
+      ...cachePolicy('master'),
+      queryKey: sectionKeys.list(`division:${division.id}`),
+      queryFn: async ({ signal }: { signal: AbortSignal }) =>
+        (
+          await api.get(`/divisions/${division.id}/sections`, {
+            query: { per_page: 200, sort: 'code' },
+            schema: z.array(SectionSchema),
+            signal,
+          })
+        ).data,
+    })),
+    combine: (results) => ({
+      sections: results.flatMap((result) => result.data ?? []),
+      isPending: results.some((result) => result.isPending),
+      error: results.find((result) => result.isError)?.error ?? null,
+      refetch: () => {
+        for (const result of results) void result.refetch();
+      },
+    }),
+  });
+}
+
+/** Every field of one estate (R.3): the API's largest page, which no estate's fields exceed. */
+export function useEstateFields(estateId: string) {
+  return useQuery({
+    ...cachePolicy('master'),
+    queryKey: fieldKeys.list(`estate:${estateId}`),
+    queryFn: async ({ signal }) =>
+      (
+        await api.get('/fields', {
+          query: { 'filter[estate_id]': estateId, per_page: 200, sort: 'field_number' },
+          schema: z.array(FieldSchema),
+          signal,
+        })
+      ).data,
   });
 }
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { z } from 'zod';
 
+import { AttachmentsPanel } from '@/features/documents';
 import { PageError, PageLoading } from '@/features/system';
 import { usePermission } from '@/lib/auth';
 import { errorBehaviour, isApiError } from '@/lib/errors';
@@ -132,11 +133,14 @@ function PartyEditor({ party }: { readonly party: Party | null }) {
       onRefused={setRefusal}
       after={
         party ? (
-          <ContactsPanel
-            owner={{ path: 'parties', id: party.id }}
-            canEdit={canEditContacts}
-            onRefused={setRefusal}
-          />
+          <>
+            <ContactsPanel
+              owner={{ path: 'parties', id: party.id }}
+              canEdit={canEditContacts}
+              onRefused={setRefusal}
+            />
+            <AttachmentsPanel owner={{ path: '/parties', id: party.id }} module="land" />
+          </>
         ) : null
       }
     >

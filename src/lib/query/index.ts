@@ -14,9 +14,14 @@ export {
 export { useCursorList, usePagedList } from './lists';
 export {
   isJobFinished,
+  isJobRetrying,
   type Job,
+  JOB_STATES,
+  jobKeys,
+  jobPercent,
   jobPollDelay,
   JobSchema,
+  type JobState,
   type RunningJob,
   useJob,
   useRunningJobs,

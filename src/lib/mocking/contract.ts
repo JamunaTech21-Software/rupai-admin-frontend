@@ -471,13 +471,34 @@ export function expireMockTokens(): void {
 
 // ---- Jobs ---------------------------------------------------------------------------------------------------
 
-/** GET /jobs/:id for jobs started with `startMockJob`: each poll advances it, and it succeeds after `steps`. */
-const jobs = new Map<string, { polls: number; steps: number; type: string }>();
+/** GET /jobs/:id for jobs started with `startMockJob`: each poll advances it, and it completes after `steps`. */
+const jobs = new Map<string, { polls: number; steps: number; type: string; queuedAt: string }>();
 
+/** A job as the backend's 202 answers: queued, no progress yet (backend jobs.schema.ts JobOut). */
 export function startMockJob(type: string, steps = 4) {
   const id = `job_${String((counter += 1))}`;
-  jobs.set(id, { polls: 0, steps, type });
-  return { id, type, status: 'queued' as const, progress: 0, created_at: new Date().toISOString() };
+  const queuedAt = new Date().toISOString();
+  jobs.set(id, { polls: 0, steps, type, queuedAt });
+  return {
+    id,
+    job_id: id,
+    type,
+    label: type,
+    state: 'queued' as const,
+    progress: { done: 0, total: steps },
+    poll_after_seconds: 5,
+    attempts: 0,
+    max_attempts: 3,
+    next_attempt_at: null,
+    queued_at: queuedAt,
+    started_at: null,
+    finished_at: null,
+    result: null,
+    error: null,
+    requested_by: null,
+    schedule: null,
+    expires_at: null,
+  };
 }
 
 export function jobMocks(base = '/api/v1'): RequestHandler[] {
@@ -489,12 +510,23 @@ export function jobMocks(base = '/api/v1'): RequestHandler[] {
       const done = job.polls >= job.steps;
       return ok({
         id: String(params.id),
+        job_id: String(params.id),
         type: job.type,
-        status: done ? 'succeeded' : 'running',
-        progress: Math.min(100, Math.round((job.polls / job.steps) * 100)),
-        result_url: done ? `/downloads/${String(params.id)}.xlsx` : null,
-        error: null,
+        label: job.type,
+        state: done ? 'completed' : 'running',
+        progress: { done: Math.min(job.polls, job.steps), total: job.steps },
+        poll_after_seconds: done ? null : 5,
+        attempts: 1,
+        max_attempts: 3,
+        next_attempt_at: null,
+        queued_at: job.queuedAt,
+        started_at: job.queuedAt,
         finished_at: done ? new Date().toISOString() : null,
+        result: done ? { download_url: `/downloads/${String(params.id)}.xlsx` } : null,
+        error: null,
+        requested_by: null,
+        schedule: null,
+        expires_at: null,
       });
     }),
   ];

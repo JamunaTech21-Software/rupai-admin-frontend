@@ -29,9 +29,7 @@ export function TopBar({ menuButton, title, actions, className }: TopBarProps) {
     >
       <div className="flex min-w-0 items-center gap-2">
         {menuButton}
-        {title ? (
-          <p className="truncate text-base font-semibold text-primary-strong sm:text-lg">{title}</p>
-        ) : null}
+        {title ? <p className="truncate text-base font-bold text-primary sm:text-lg">{title}</p> : null}
       </div>
       {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
     </header>

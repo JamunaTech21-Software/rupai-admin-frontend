@@ -99,6 +99,8 @@ export interface DataTableProps<TRow> {
 
   /** Filters and actions above the table. */
   readonly toolbar?: ReactNode;
+  /** Already inside a Card: no card of its own (by default the table, its filters and pages form one card, as the design). */
+  readonly isPlain?: boolean;
   /** Height of the scrolling area; the header stays visible inside it. */
   readonly maxHeight?: string;
   readonly className?: string;
@@ -149,6 +151,7 @@ export function DataTable<TRow>({
   storageKey,
   userId,
   toolbar,
+  isPlain = false,
   maxHeight = '70dvh',
   className,
 }: DataTableProps<TRow>) {
@@ -522,7 +525,13 @@ export function DataTable<TRow>({
   }
 
   return (
-    <div className={cx('flex flex-col gap-3', className)}>
+    <div
+      className={cx(
+        'flex flex-col gap-3',
+        !isPlain && 'rounded-lg border border-line bg-surface p-4 shadow-sm sm:p-6',
+        className,
+      )}
+    >
       {header}
       {bulkBar}
       {body}

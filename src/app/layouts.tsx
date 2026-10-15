@@ -44,7 +44,7 @@ export function ApplicationLayout() {
 
   return (
     <AppShell
-      brand={{ name: tc('appName'), tagline: tc('tagline'), logoSrc: '/logo.png' }}
+      brand={{ name: tc('appName'), tagline: tc('tagline'), logoSrc: '/logo.png', version: __APP_VERSION__ }}
       navigation={navigation}
       currentPath={pathname}
       {...(title ? { title } : {})}

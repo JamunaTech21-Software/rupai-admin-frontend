@@ -10,6 +10,7 @@ import { authMocks, MOCK_PASSWORD, resetMockSession } from '@/lib/mocking/contra
 
 import { axeViolations } from './axe';
 import { server } from './msw/server';
+import { openSidebarGroup } from './sidebar';
 
 /** P1.04 (RUP-107): the separation-of-duties dialog, the Authorisations tab, and the access review. */
 
@@ -165,7 +166,7 @@ describe('access review', () => {
 
   it('is in the sidebar under Administration', async () => {
     await openAs('manager', '/');
-    const nav = await screen.findByRole('navigation', { name: 'Main' });
+    const nav = await openSidebarGroup('User Administration');
     expect(within(nav).getByRole('link', { name: 'Access review' })).toHaveAttribute(
       'href',
       '/admin/access-review',

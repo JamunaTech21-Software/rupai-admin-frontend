@@ -65,6 +65,7 @@ export function buildUiText(t: TFunction<'ui'>, language: string): UiText {
     collapseNavigation: t('collapseNavigation'),
     skipToMain: t('skipToMain'),
     needAttention: (count) => t('needAttention', { count }),
+    appVersion: (version) => t('appVersion', { version }),
     account: (name) => t('account', { name }),
     step: (index, total, state) =>
       t(state === 'complete' ? 'stepComplete' : state === 'current' ? 'stepCurrent' : 'stepUpcoming', {

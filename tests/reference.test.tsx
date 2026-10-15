@@ -11,6 +11,7 @@ import { authMocks, MOCK_PASSWORD, resetMockSession } from '@/lib/mocking/contra
 
 import { axeViolations } from './axe';
 import { server } from './msw/server';
+import { openSidebarGroup } from './sidebar';
 
 /** P1.10 (RUP-197): the reference masters, units of measure and tea grades. */
 
@@ -65,7 +66,7 @@ describe('reference data', () => {
     expect(within(main).getByRole('link', { name: 'Units of measure' })).toHaveAttribute('href', '/uoms');
     expect(within(main).getByRole('link', { name: 'Tea grades' })).toHaveAttribute('href', '/tea-grades');
 
-    const nav = screen.getByRole('navigation', { name: 'Main' });
+    const nav = await openSidebarGroup('Master Data');
     for (const name of ['All masters', 'Units of measure', 'Tea grades']) {
       expect(within(nav).getByRole('link', { name })).toBeInTheDocument();
     }

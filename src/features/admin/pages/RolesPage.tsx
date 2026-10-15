@@ -18,7 +18,13 @@ export function RolesPage() {
       id: 'name',
       header: t('roles.columns.name'),
       isSortable: true,
-      cell: (role) => <Link href={`/admin/roles/${role.id}`}>{role.name}</Link>,
+      cell: (role) => (
+        <span className="flex flex-wrap items-center gap-2">
+          <Link href={`/admin/roles/${role.id}`}>{role.name}</Link>
+          {/* Custom is the norm: only a system role says so, which keeps the list narrow. */}
+          {role.is_system ? <Badge tone="info" hideIcon label={t('roles.system')} /> : null}
+        </span>
+      ),
     },
     {
       id: 'code',
@@ -37,13 +43,6 @@ export function RolesPage() {
       header: t('roles.columns.permissions'),
       isNumeric: true,
       cell: (role) => format.number(role.permissions.length),
-    },
-    {
-      id: 'type',
-      header: t('roles.columns.type'),
-      canHide: true,
-      cell: (role) =>
-        role.is_system ? <Badge tone="info" label={t('roles.system')} /> : <span>{t('roles.custom')}</span>,
     },
     { id: 'status', header: t('roles.columns.status'), cell: (role) => <StatusBadge status={role.status} /> },
   ];

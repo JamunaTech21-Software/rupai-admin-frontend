@@ -7,7 +7,8 @@ import { MemoryRouter, useLocation } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
-import { ConflictDialogHost, RunningJobs } from '@/features/system';
+import { RunningJobs } from '@/features/jobs';
+import { ConflictDialogHost } from '@/features/system';
 import { DataTable } from '@/ui';
 
 import { server } from './msw/server';
@@ -302,7 +303,7 @@ describe('useCursorList', () => {
 
 describe('useJob', () => {
   it('backs off between polls', () => {
-    expect([0, 1, 2, 3, 10].map(jobPollDelay)).toEqual([1000, 1500, 2250, 3375, 10_000]);
+    expect([0, 1, 2, 3, 10].map(jobPollDelay)).toEqual([2000, 3000, 4500, 6750, 10_000]);
   });
 
   it('polls until the job ends, and lists it in the top bar meanwhile', async () => {
@@ -312,24 +313,42 @@ describe('useJob', () => {
         polls += 1;
         const done = polls >= 2;
         return HttpResponse.json({
-          data: { id: 'j1', status: done ? 'succeeded' : 'running', progress: done ? 100 : 40 },
+          data: {
+            id: 'j1',
+            type: 'export',
+            label: 'Exporting workers',
+            state: done ? 'completed' : 'running',
+            progress: { done: done ? 10 : 4, total: 10 },
+            poll_after_seconds: done ? null : 5,
+            attempts: 1,
+            max_attempts: 3,
+            next_attempt_at: null,
+            queued_at: '2026-10-15T04:00:00.000Z',
+            started_at: '2026-10-15T04:00:01.000Z',
+            finished_at: done ? '2026-10-15T04:00:09.000Z' : null,
+            result: null,
+            error: null,
+            requested_by: null,
+            schedule: null,
+            expires_at: null,
+          },
           meta,
         });
       }),
     );
     function Exporter() {
-      const job = useJob('j1', { label: 'Exporting workers', client });
+      const job = useJob('j1', { client });
       return (
         <>
           <RunningJobs />
-          <p>{job.data?.status ?? 'starting'}</p>
+          <p>{job.data?.state ?? 'starting'}</p>
         </>
       );
     }
     render(<Exporter />, { wrapper: wrapper(testClient()) });
     expect(await screen.findByText('running')).toBeInTheDocument();
     expect(screen.getAllByText('Exporting workers (40%)').length).toBeGreaterThan(0);
-    expect(await screen.findByText('succeeded', {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(await screen.findByText('completed', {}, { timeout: 6000 })).toBeInTheDocument();
     expect(screen.queryByText(/Exporting workers/)).not.toBeInTheDocument();
     expect(polls).toBe(2);
   });

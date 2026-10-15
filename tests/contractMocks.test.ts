@@ -117,10 +117,13 @@ describe('contract helpers', () => {
 
   it('jobs advance on each poll and end with a result', async () => {
     const job = startMockJob('export', 2);
-    const first = await client.get<{ status: string; progress: number }>(`/jobs/${job.id}`);
-    expect(first.data).toMatchObject({ status: 'running', progress: 50 });
-    const second = await client.get<{ status: string; result_url: string }>(`/jobs/${job.id}`);
-    expect(second.data.status).toBe('succeeded');
-    expect(second.data.result_url).toContain(job.id);
+    expect(job).toMatchObject({ state: 'queued', progress: { done: 0, total: 2 } });
+    const first = await client.get<{ state: string; progress: { done: number; total: number } }>(
+      `/jobs/${job.id}`,
+    );
+    expect(first.data).toMatchObject({ state: 'running', progress: { done: 1, total: 2 } });
+    const second = await client.get<{ state: string; result: { download_url: string } }>(`/jobs/${job.id}`);
+    expect(second.data.state).toBe('completed');
+    expect(second.data.result.download_url).toContain(job.id);
   });
 });

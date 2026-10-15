@@ -12,7 +12,7 @@
  *   (and an icon where there is room).
  * - Every text pair listed in src/ui/tokens.ts meets WCAG AA (4.5:1 text, 3:1 UI); tokens.test.ts checks it.
  *
- * Values are placeholders derived from the RupAI dashboard until the designer's palette arrives (open item O-23).
+ * Values follow the manager's design (R.1, docs/redesign-spec.md).
  * Change a value here only; nothing else hard-codes a colour.
  */
 
@@ -25,7 +25,8 @@
   --color-surface-subtle: #f1f5f9; /* table headers, hovered rows, read-only fields */
   --color-surface-inverse: #1e293b; /* tooltips, the environment banner */
 
-  --color-fg: #1e293b; /* primary text */
+  --color-fg: #334155; /* body text */
+  --color-fg-strong: #1e293b; /* headings, names, emphasis */
   --color-fg-muted: #475569; /* secondary text, labels */
   --color-fg-subtle: #5b6678; /* hints, placeholders, metadata */
   --color-fg-on-primary: #ffffff; /* text on primary and on solid feedback colours */
@@ -40,6 +41,8 @@
   --color-primary-subtle: #e8f5f0; /* selected rows, the active nav background */
   --color-primary-strong: #134438; /* text on primary-subtle */
   --color-focus: #2a7a62; /* the focus ring */
+  --color-heading: #166534; /* card titles */
+  --color-card-header: #f0fdf4; /* the bar behind a card's title */
 
   /* ---- Colour: feedback (solid = text/icon on surface, or a background behind fg-on-primary) ------------ */
   --color-success: #13703a;
@@ -72,24 +75,28 @@
     'Inter Variable', 'Noto Sans Bengali Variable', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo, Consolas, monospace;
 
-  /* Type scale: ratio 1.200 (minor third) from a 16 px base. Body text is text-base, never smaller on mobile. */
+  /* Type scale: Tailwind's, as the design (R.1). Body text is text-base, never smaller on mobile. */
   --text-*: initial;
-  --text-xs: 0.694rem; /* 11.1 px: captions only, never body text */
+  --text-2xs: 0.625rem; /* 10 px: sidebar section labels only (uppercase, semibold) */
+  --text-2xs--line-height: 0.875rem;
+  --text-xs: 0.75rem; /* 12 px: captions, badges, sidebar sub-items */
   --text-xs--line-height: 1rem;
-  --text-sm: 0.833rem; /* 13.3 px: metadata, table secondary text */
+  --text-nav: 0.8125rem; /* 13 px: sidebar items */
+  --text-nav--line-height: 1.25rem;
+  --text-sm: 0.875rem; /* 14 px: form labels, table cells, buttons, metadata */
   --text-sm--line-height: 1.25rem;
   --text-base: 1rem; /* 16 px: body text, inputs */
   --text-base--line-height: 1.5rem;
-  --text-lg: 1.2rem; /* 19.2 px */
+  --text-lg: 1.125rem; /* 18 px: card titles, the header's page title */
   --text-lg--line-height: 1.75rem;
-  --text-xl: 1.44rem; /* 23 px: section titles */
-  --text-xl--line-height: 2rem;
-  --text-2xl: 1.728rem; /* 27.6 px: page titles */
-  --text-2xl--line-height: 2.25rem;
-  --text-3xl: 2.074rem; /* 33.2 px */
-  --text-3xl--line-height: 2.5rem;
-  --text-4xl: 2.488rem; /* 39.8 px: dashboard figures */
-  --text-4xl--line-height: 3rem;
+  --text-xl: 1.25rem; /* 20 px: section titles */
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem; /* 24 px: page titles */
+  --text-2xl--line-height: 2rem;
+  --text-3xl: 1.875rem; /* 30 px */
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl: 2.25rem; /* 36 px: dashboard figures */
+  --text-4xl--line-height: 2.5rem;
 
   /* ---- Spacing: a 4 px grid. `p-1` = 4 px, `p-4` = 16 px, `gap-6` = 24 px ------------------------------------- */
   --spacing: 0.25rem;
@@ -97,8 +104,8 @@
   /* ---- Radii ---------------------------------------------------------------------------------------------- */
   --radius-*: initial;
   --radius-sm: 0.25rem; /* 4 px: badges, tags */
-  --radius-md: 0.375rem; /* 6 px: buttons, inputs */
-  --radius-lg: 0.5rem; /* 8 px: cards */
+  --radius-md: 0.5rem; /* 8 px: buttons, inputs */
+  --radius-lg: 0.75rem; /* 12 px: cards */
   --radius-xl: 0.75rem; /* 12 px: modals, drawers */
   --radius-full: 9999px; /* pills, avatars */
 
@@ -119,7 +126,7 @@
 
   /* ---- Sizes ---------------------------------------------------------------------------------------------- */
   --size-touch-target: 2.75rem; /* 44 px: minimum below md */
-  --size-control: 2.25rem; /* 36 px: control height from md up */
+  --size-control: 2.5rem; /* 40 px: control height from md up */
 
   /* ---- Z-index layers: use as `z-(--z-modal)`; never a bare number ------------------------------------------- */
   --z-base: 0;

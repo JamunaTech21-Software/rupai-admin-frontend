@@ -2,6 +2,7 @@ import { type ReactNode, useState } from 'react';
 import { Dialog, Link as AriaLink, Modal as AriaModal, ModalOverlay } from 'react-aria-components';
 
 import { cx } from './cx';
+import { Icon } from './Icon';
 import { IconButton } from './IconButton';
 import { Sidebar, type NavSection } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -35,6 +36,8 @@ export interface AppShellProps {
     readonly tagline?: string;
     readonly logoSrc?: string;
     readonly href?: string;
+    /** Shown on the card at the foot of the sidebar. */
+    readonly version?: string;
   };
   readonly navigation: readonly NavSection[];
   readonly currentPath: string;
@@ -65,10 +68,43 @@ function Brand({
     >
       {brand.logoSrc ? <img src={brand.logoSrc} alt="" className="size-8 shrink-0 object-contain" /> : null}
       <span className={cx('flex min-w-0 flex-col', isCollapsed && 'sr-only')}>
-        <span className="text-lg leading-tight font-bold text-primary-strong">{brand.name}</span>
-        {brand.tagline ? <span className="truncate text-xs text-fg-muted">{brand.tagline}</span> : null}
+        <span className="text-lg leading-tight font-bold text-primary">{brand.name}</span>
+        {brand.tagline ? (
+          <span className="truncate text-2xs font-medium text-fg-subtle">{brand.tagline}</span>
+        ) : null}
       </span>
     </AriaLink>
+  );
+}
+
+/** The product and its version, on a primary card at the foot of the sidebar (design R.1). */
+function VersionCard({
+  brand,
+  isCollapsed,
+}: {
+  readonly brand: AppShellProps['brand'];
+  readonly isCollapsed: boolean;
+}) {
+  const text = useUiText();
+  if (!brand.version) return null;
+  const version = text.appVersion(brand.version);
+  return (
+    <div className={cx('shrink-0 border-t border-line p-3', isCollapsed && 'p-2')}>
+      <div
+        className={cx(
+          'flex items-center gap-2.5 rounded-lg bg-primary px-3.5 py-3 text-fg-on-primary',
+          isCollapsed && 'justify-center p-2.5',
+        )}
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-fg-on-primary/15">
+          <Icon name="leaf" size="sm" />
+        </span>
+        <span className={cx('flex min-w-0 flex-col', isCollapsed && 'sr-only')}>
+          <span className="truncate text-sm font-semibold">{brand.name}</span>
+          <span className="text-xs">{version}</span>
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -113,7 +149,8 @@ export function AppShell({
   );
 
   return (
-    <div className="flex min-h-dvh flex-col bg-canvas">
+    // One screen high, as the design: the banner on top, the sidebar filling the rest, the content scrolling on its own.
+    <div className="flex h-dvh flex-col overflow-hidden bg-canvas">
       <a
         href="#main"
         className="sr-only z-(--z-toast) rounded-md bg-surface px-4 py-2 font-medium text-primary-strong shadow-md focus:not-sr-only focus:fixed focus:start-4 focus:top-4"
@@ -125,7 +162,7 @@ export function AppShell({
         {isWide ? (
           <aside
             className={cx(
-              'sticky top-0 flex h-dvh shrink-0 flex-col border-e border-line bg-surface transition-[width] duration-(--duration-base) motion-reduce:transition-none',
+              'flex h-full shrink-0 flex-col border-e border-line bg-surface transition-[width] duration-(--duration-base) motion-reduce:transition-none',
               isCollapsed ? 'w-18' : 'w-68',
             )}
           >
@@ -134,8 +171,9 @@ export function AppShell({
               sections={navigation}
               currentPath={currentPath}
               isCollapsed={isCollapsed}
-              className="flex-1"
+              className="min-h-0 flex-1"
             />
+            <VersionCard brand={brand} isCollapsed={isCollapsed} />
           </aside>
         ) : (
           <ModalOverlay
@@ -156,17 +194,18 @@ export function AppShell({
                       sections={navigation}
                       currentPath={currentPath}
                       onNavigate={close}
-                      className="flex-1"
+                      className="min-h-0 flex-1"
                     />
+                    <VersionCard brand={brand} isCollapsed={false} />
                   </>
                 )}
               </Dialog>
             </AriaModal>
           </ModalOverlay>
         )}
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
           <TopBar menuButton={menuButton} {...(title ? { title } : {})} actions={topBarActions} />
-          <main id="main" tabIndex={-1} className="flex-1 p-3 outline-none sm:p-4 lg:p-6">
+          <main id="main" tabIndex={-1} className="flex-1 p-3 outline-none sm:p-4">
             {children}
           </main>
         </div>

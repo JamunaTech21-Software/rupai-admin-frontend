@@ -10,8 +10,8 @@ import { Spinner } from './Spinner';
 /** Heights from md up. Below md every button is at least 44 px tall (base.css). */
 const SIZE: Record<ButtonSize, string> = {
   sm: 'text-sm px-3 md:h-8',
-  md: 'text-base px-4 md:h-(--size-control)',
-  lg: 'text-lg px-5 md:h-(--size-touch-target)',
+  md: 'text-sm px-5 md:h-(--size-control)',
+  lg: 'text-base px-6 md:h-(--size-touch-target)',
 };
 
 export interface ButtonProps extends Omit<AriaButtonProps, 'children' | 'className' | 'style'> {
