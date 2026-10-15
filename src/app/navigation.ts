@@ -35,6 +35,7 @@ type PageKey =
   | 'allApprovals'
   | 'approvalExceptions'
   | 'workflows'
+  | 'notificationRules'
   | 'delegations'
   | 'designTokens';
 
@@ -214,6 +215,13 @@ export const NAVIGATION: readonly AppNavSection[] = [
             href: '/admin/workflows',
             icon: 'sliders',
             permission: 'workflow.view',
+          },
+          {
+            id: 'notification-rules',
+            labelKey: 'notificationRules',
+            href: '/admin/notification-rules',
+            icon: 'bell',
+            permission: 'notification.view',
           },
           {
             id: 'numbering',

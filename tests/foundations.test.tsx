@@ -154,6 +154,7 @@ describe('permissions', () => {
     expect(children('systemSettings', 'configuration')).toEqual([
       'organisation',
       'workflows',
+      'notification-rules',
       'numbering',
       'settings',
       'all-approvals',

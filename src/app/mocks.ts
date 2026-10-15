@@ -5,6 +5,7 @@ import { loadApprovalsMocks } from '@/features/approvals';
 import { loadConfigurationMocks } from '@/features/configuration';
 import { loadDocumentsMocks } from '@/features/documents';
 import { loadJobsMocks } from '@/features/jobs';
+import { loadNotificationsMocks } from '@/features/notifications';
 import { loadOrganisationMocks } from '@/features/organisation';
 import { loadReferenceMocks } from '@/features/reference';
 import { loadSystemMocks } from '@/features/system';
@@ -21,6 +22,7 @@ const FEATURE_MOCKS: Record<string, () => Promise<{ handlers: RequestHandler[] }
   auth: () => import('@/lib/mocking/contract').then((m) => ({ handlers: m.authMocks() })),
   jobs: loadJobsMocks,
   approvals: loadApprovalsMocks,
+  notifications: loadNotificationsMocks,
   workflows: loadWorkflowsMocks,
   admin: loadAdminMocks,
   // Before organisation: its estate-photo handlers answer the same /documents addresses, and the first match wins.
