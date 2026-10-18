@@ -14,6 +14,36 @@ import { estateKeys } from './hierarchy';
 
 // ---- Overview -------------------------------------------------------------------------------------------
 
+/** The figures of the overview that can be entered (R.2). */
+export const FIGURES = [
+  'tea_area',
+  'non_tea_area',
+  'division_count',
+  'section_count',
+  'field_count',
+  'worker_count',
+  'family_count',
+] as const;
+export type Figure = (typeof FIGURES)[number];
+
+const Counts = z.object({ total: z.number().int(), active: z.number().int(), inactive: z.number().int() });
+
+/** The figures under the Division & Section and Field / Block lists (R.3): always computed by the server. */
+export const HierarchySummarySchema = z.object({
+  divisions: Counts,
+  sections: Counts,
+  fields: Counts,
+  /** Active fields per field type; every type is present. */
+  field_types: z.record(z.string(), z.number().int()),
+  division_area: z.string(),
+  section_area: z.string(),
+  /** Null when no section has an area. */
+  average_section_area: z.string().nullable(),
+  field_area: z.string(),
+  planted_area: z.string(),
+});
+export type HierarchySummary = z.infer<typeof HierarchySummarySchema>;
+
 export const EstateSummarySchema = z.object({
   estate_id: z.string(),
   /** The declared total land area; null while none is declared. Acres. */
@@ -28,7 +58,12 @@ export const EstateSummarySchema = z.object({
   worker_count: z.number().int(),
   family_count: z.number().int(),
   /** False until HR exists: workers and families are not known yet. */
+  /** Where each figure above came from: what was entered, or what the records say. */
+  source: z.partialRecord(z.enum(FIGURES), z.enum(['entered', 'computed'])),
+  /** What the records say, always (workers and families are null until HR). */
+  computed: z.partialRecord(z.enum(FIGURES), z.union([z.string(), z.number().int()]).nullable()),
   workforce_available: z.boolean(),
+  hierarchy: HierarchySummarySchema,
   photo_count: z.number().int(),
 });
 export type EstateSummary = z.infer<typeof EstateSummarySchema>;

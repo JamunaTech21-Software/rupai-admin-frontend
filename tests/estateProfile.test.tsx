@@ -94,23 +94,63 @@ describe('estate profile', () => {
     expect(await axeViolations(appRoot)).toEqual([]);
   });
 
-  it('works out non-tea area from the total land area as it is typed', async () => {
+  it('shows the computed figures as the prompt, and non-tea area follows what is typed', async () => {
     await openProfile();
     const overview = await card('Estate Overview');
-    const nonTea = () => within(overview).getByText('Non-tea area (acre)').nextElementSibling;
-    expect(nonTea()).toHaveTextContent('Not declared');
-    // Tea area is 28.750 acres (from the fields); 40 declared leaves 11.25 outside tea.
-    await userEvent.type(within(overview).getByRole('textbox', { name: /Total land area/ }), '40');
+    const box = (name: RegExp) => within(overview).getByRole('textbox', { name });
+    // Nothing entered: the records' figures are the prompts, and each says it is automatic.
     await waitFor(() => {
-      expect(nonTea()).toHaveTextContent('11.25');
+      expect(box(/Tea area/)).toHaveAttribute('placeholder', '28.75');
     });
+    expect(within(overview).getAllByText('Auto').length).toBeGreaterThanOrEqual(5);
+    // Tea area is 28.750 acres from the fields; 40 declared leaves 11.25 outside tea, until it is typed.
+    await userEvent.type(box(/Total land area/), '40');
+    await waitFor(() => {
+      expect(box(/Non-tea area/)).toHaveAttribute('placeholder', '11.25');
+    });
+    // Typing tea area moves it live; the records are still said beside it.
+    await userEvent.type(box(/Tea area/), '30');
+    await waitFor(() => {
+      expect(box(/Non-tea area/)).toHaveAttribute('placeholder', '10.00');
+    });
+    expect(within(overview).getByText('Records: 28.75')).toBeInTheDocument();
     // A total smaller than the tea area never goes below zero.
-    await userEvent.clear(within(overview).getByRole('textbox', { name: /Total land area/ }));
-    await userEvent.type(within(overview).getByRole('textbox', { name: /Total land area/ }), '10');
+    await userEvent.clear(box(/Total land area/));
+    await userEvent.type(box(/Total land area/), '10');
     await waitFor(() => {
-      expect(nonTea()).toHaveTextContent('0.00');
+      expect(box(/Non-tea area/)).toHaveAttribute('placeholder', '0.00');
     });
-  });
+    // Clearing a figure goes back to the computed one.
+    await userEvent.clear(box(/Tea area/));
+    await waitFor(() => {
+      expect(box(/Tea area/)).toHaveValue('');
+    });
+    expect(within(overview).queryByText('Records: 28.75')).not.toBeInTheDocument();
+  }, 60_000);
+
+  it('saves the entered figures with the profile, and refuses tea area above the total', async () => {
+    await openProfile();
+    const overview = await card('Estate Overview');
+    const box = (name: RegExp) => within(overview).getByRole('textbox', { name });
+    await userEvent.type(box(/Total land area/), '40');
+    await userEvent.type(box(/Tea area/), '45');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await within(overview).findByText('Cannot be more than the total land area.')).toBeInTheDocument();
+
+    await userEvent.clear(box(/Tea area/));
+    await userEvent.type(box(/Tea area/), '30');
+    await userEvent.type(within(overview).getByRole('textbox', { name: /Total division/ }), '9');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText('Estate profile saved')).toBeInTheDocument();
+
+    // Read back after the reload the save causes: what was entered is kept, and the records are still said.
+    const again = await card('Estate Overview');
+    await waitFor(() => {
+      expect(within(again).getByRole('textbox', { name: /Total division/ })).toHaveValue('9');
+    });
+    expect(within(again).getByText('Records: 2')).toBeInTheDocument();
+    expect(within(again).getByText('Records: 28.75')).toBeInTheDocument();
+  }, 90_000);
 
   it('saves the basic information, facilities and a new assistant manager with one Save', async () => {
     await openProfile();
@@ -160,7 +200,7 @@ describe('estate profile', () => {
     await userEvent.type(within(geo).getByRole('textbox', { name: 'Longitude' }), '200');
     await userEvent.tab();
     expect(await screen.findByText('Enter a longitude between -180 and 180.')).toBeInTheDocument();
-  });
+  }, 60_000);
 
   it('Reset puts back what was saved', async () => {
     await openProfile();

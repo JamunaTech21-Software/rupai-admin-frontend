@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 
 import { api, useIdempotencyKey } from '@/lib/api';
@@ -13,6 +13,7 @@ import {
   EstateSchema,
   type EstateType,
   type Field,
+  type FieldType,
   FieldSchema,
   type Organisation,
   OrganisationSchema,
@@ -180,6 +181,14 @@ export interface EstateInput {
   /** The whole set of ticked facilities, replacing the previous one. */
   readonly amenity_ids: readonly string[];
   readonly other_amenities: string | null;
+  /** Entered overview figures; null goes back to the computed one. */
+  readonly tea_area: string | null;
+  readonly non_tea_area: string | null;
+  readonly division_count: number | null;
+  readonly section_count: number | null;
+  readonly field_count: number | null;
+  readonly worker_count: number | null;
+  readonly family_count: number | null;
 }
 
 export function useCreateEstate() {
@@ -236,35 +245,32 @@ export function useSections(divisionId: string) {
 }
 
 /**
- * Every section of an estate (R.3), one request per division (the API lists sections by division). Shares
- * useSections' cache, so adding or changing a section refreshes both.
+ * Every section of an estate in one request (R.3; the API's largest page, 1000, which no estate's sections exceed).
+ * Shares the sections' list key with useSections, so adding or changing a section refreshes both.
  */
-export function useEstateSections(divisions: readonly Division[]) {
-  return useQueries({
-    queries: divisions.map((division) => ({
-      ...cachePolicy('master'),
-      queryKey: sectionKeys.list(`division:${division.id}`),
-      queryFn: async ({ signal }: { signal: AbortSignal }) =>
-        (
-          await api.get(`/divisions/${division.id}/sections`, {
-            query: { per_page: 200, sort: 'code' },
-            schema: z.array(SectionSchema),
-            signal,
-          })
-        ).data,
-    })),
-    combine: (results) => ({
-      sections: results.flatMap((result) => result.data ?? []),
-      isPending: results.some((result) => result.isPending),
-      error: results.find((result) => result.isError)?.error ?? null,
-      refetch: () => {
-        for (const result of results) void result.refetch();
-      },
-    }),
+export function useEstateSections(estateId: string) {
+  const query = useQuery({
+    ...cachePolicy('master'),
+    queryKey: sectionKeys.list(`estate:${estateId}`),
+    enabled: estateId !== '',
+    queryFn: async ({ signal }) =>
+      (
+        await api.get('/sections', {
+          query: { 'filter[estate_id]': estateId, per_page: 1000, sort: 'code' },
+          schema: z.array(SectionSchema),
+          signal,
+        })
+      ).data,
   });
+  return {
+    sections: query.data ?? [],
+    isPending: query.isPending,
+    error: query.error,
+    refetch: () => void query.refetch(),
+  };
 }
 
-/** Every field of one estate (R.3): the API's largest page, which no estate's fields exceed. */
+/** Every field of one estate (R.3): the API's largest page (1000), which no estate's fields exceed. */
 export function useEstateFields(estateId: string) {
   return useQuery({
     ...cachePolicy('master'),
@@ -272,7 +278,7 @@ export function useEstateFields(estateId: string) {
     queryFn: async ({ signal }) =>
       (
         await api.get('/fields', {
-          query: { 'filter[estate_id]': estateId, per_page: 200, sort: 'field_number' },
+          query: { 'filter[estate_id]': estateId, per_page: 1000, sort: 'field_number' },
           schema: z.array(FieldSchema),
           signal,
         })
@@ -299,11 +305,17 @@ export function useSection(id: string) {
   });
 }
 
-/** Division and section forms share these fields (the manager / supervisor arrives with HR, Phase 2). */
+/**
+ * Division and section forms share these fields (the manager / supervisor arrives with HR, Phase 2). A section may
+ * sit inside another section of its division.
+ */
 export interface NodeInput {
   readonly code: string;
   readonly name: string;
   readonly area: string | null;
+  readonly description: string | null;
+  /** Sections only. */
+  readonly parent_section_id?: string | null;
 }
 
 /** Create a division under an estate, or a section under a division. */
@@ -364,6 +376,16 @@ export interface FieldInput {
   readonly planted_area: string | null;
   readonly field_status: Field['field_status'];
   readonly remarks: string | null;
+  readonly field_type: FieldType;
+  readonly parent_field_id: string | null;
+  readonly planting_year: number | null;
+  readonly tea_variety_id: string | null;
+  readonly spacing: string | null;
+  readonly altitude: string | null;
+  readonly average_slope: string | null;
+  readonly irrigation_source_id: string | null;
+  readonly soil_type_id: string | null;
+  readonly drainage_class_id: string | null;
 }
 
 /** Create a field. The section decides the estate: estate_id is never sent. */

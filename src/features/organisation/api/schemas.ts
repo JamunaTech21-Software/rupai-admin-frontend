@@ -80,6 +80,14 @@ export const EstateSchema = z.object({
   description: z.string().nullable(),
   amenities: z.array(z.object({ id: z.string(), code: z.string(), name: z.string() })),
   other_amenities: z.string().nullable(),
+  /** Entered overview figures, acres and counts; null: not entered, the computed one is shown (R.2). */
+  tea_area: z.string().nullable(),
+  non_tea_area: z.string().nullable(),
+  division_count: z.number().int().nullable(),
+  section_count: z.number().int().nullable(),
+  field_count: z.number().int().nullable(),
+  worker_count: z.number().int().nullable(),
+  family_count: z.number().int().nullable(),
   version: z.number(),
   created_at: z.string(),
   updated_at: z.string().nullable(),
@@ -93,6 +101,9 @@ export const DivisionSchema = z.object({
   name: z.string(),
   manager_profile_id: z.string().nullable(),
   area: z.string().nullable(),
+  description: z.string().nullable(),
+  /** Active sections of the division ("Total Section"). */
+  section_count: z.number().int(),
   status: z.enum(STATUSES),
   version: z.number(),
   created_at: z.string(),
@@ -108,12 +119,31 @@ export const SectionSchema = z.object({
   name: z.string(),
   supervisor_profile_id: z.string().nullable(),
   area: z.string().nullable(),
+  /** Another section of the same division ("Parent Section"). */
+  parent_section_id: z.string().nullable(),
+  parent_section: z.object({ id: z.string(), code: z.string(), name: z.string().nullable() }).nullable(),
+  description: z.string().nullable(),
   status: z.enum(STATUSES),
   version: z.number(),
   created_at: z.string(),
   updated_at: z.string().nullable(),
 });
 export type Section = z.infer<typeof SectionSchema>;
+
+export const FIELD_TYPES = [
+  'tea_field',
+  'nursery',
+  'extension',
+  'infrastructure',
+  'drain',
+  'road_reserve',
+  'shade_area',
+  'road_side',
+  'water_body',
+] as const;
+export type FieldType = (typeof FIELD_TYPES)[number];
+
+const LookupRef = z.object({ id: z.string(), code: z.string(), name: z.string() });
 
 export const FieldSchema = z.object({
   id: z.string(),
@@ -128,6 +158,27 @@ export const FieldSchema = z.object({
   section_effective_from: z.string().nullable(),
   status: z.enum(STATUSES),
   remarks: z.string().nullable(),
+  field_type: z.enum(FIELD_TYPES),
+  parent_field_id: z.string().nullable(),
+  parent_field: z
+    .object({ id: z.string(), field_number: z.string(), name: z.string().nullable() })
+    .nullable(),
+  planting_year: z.number().int().nullable(),
+  tea_variety_id: z.string().nullable(),
+  tea_variety: LookupRef.nullable(),
+  spacing: z.string().nullable(),
+  /** Feet above sea level, two places. */
+  altitude: z.string().nullable(),
+  /** Degrees, two places. */
+  average_slope: z.string().nullable(),
+  irrigation_source_id: z.string().nullable(),
+  irrigation_source: LookupRef.nullable(),
+  soil_type_id: z.string().nullable(),
+  soil_type: LookupRef.nullable(),
+  drainage_class_id: z.string().nullable(),
+  drainage_class: LookupRef.nullable(),
+  /** Who added the field ("Created By"). */
+  created_by: z.object({ id: z.string(), username: z.string() }),
   version: z.number(),
   created_at: z.string(),
   updated_at: z.string().nullable(),

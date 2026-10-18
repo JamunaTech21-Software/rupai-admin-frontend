@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { z } from 'zod';
 
@@ -15,6 +15,7 @@ import {
   DatePicker,
   DescriptionList,
   Input,
+  NumberInput,
   PageHeader,
   Select,
   Stack,
@@ -28,18 +29,30 @@ import {
   useCreateField,
   useDivision,
   useDivisions,
+  useEstateFields,
   useField,
   useSection,
   useSections,
   useUpdateField,
 } from '../api/hierarchy';
-import { type Field, FIELD_STATUSES, NODE_CODE } from '../api/schemas';
+import { type Field, FIELD_STATUSES, FIELD_TYPES, NODE_CODE } from '../api/schemas';
+import { LookupSelect } from '../components/LookupSelect';
 import { MoveFieldModal } from '../components/MoveFieldModal';
 import { NodeLifecycle } from '../components/NodeLifecycle';
 import { AreaInput } from '../components/AreaInput';
 
 const blankToNull = (value: string) => (value.trim() === '' ? null : value.trim());
 const todayIso = () => new Date().toISOString().slice(0, 10);
+const thisYear = () => new Date().getFullYear();
+const NONE = 'none';
+
+/** A number with at most two decimals inside a range, typed as text (`''` when empty). */
+const twoPlaces = (min: string, max: string) => (value: string) => {
+  if (value === '') return true;
+  if (!/^-?\d+(\.\d{1,2})?$/.test(value)) return false;
+  const n = new Dec(value);
+  return n.gte(min) && n.lte(max);
+};
 
 /** Organisation → Fields → one field (or a new one). */
 export function FieldPage() {
@@ -84,6 +97,8 @@ function FieldLocation({ field }: { readonly field: Field }) {
             </span>
           ),
         },
+        { term: t('field.createdBy'), description: field.created_by.username },
+        { term: t('field.createdOn'), description: format.dateTime(field.created_at) },
       ]}
     />
   );
@@ -93,16 +108,28 @@ function FieldLocation({ field }: { readonly field: Field }) {
 function LocationPicker({
   sectionId,
   onSection,
+  onEstate,
   error,
 }: {
   readonly sectionId: string | null;
   readonly onSection: (id: string | null) => void;
+  /** Told when the estate is chosen (a new field's parent can only be a field of that estate). */
+  readonly onEstate: (id: string | null) => void;
   readonly error: string | undefined;
 }) {
   const { t } = useTranslation('org');
   const [params] = useSearchParams();
   const estates = useAllEstates();
-  const [estateId, setEstateId] = useState<string | null>(params.get('estate'));
+  const [estateId, setEstateIdState] = useState<string | null>(params.get('estate'));
+  const setEstateId = (id: string | null) => {
+    setEstateIdState(id);
+    onEstate(id);
+  };
+  // The estate may come with the link (/fields/new?estate=1): say so once.
+  useEffect(() => {
+    onEstate(params.get('estate'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on arrival
+  }, []);
   const [divisionId, setDivisionId] = useState<string | null>(null);
   const divisions = useDivisions(estateId ?? '');
   const sections = useSections(divisionId ?? '');
@@ -163,6 +190,17 @@ function FieldForm({ field }: { readonly field: Field | null }) {
   const update = useUpdateField(field ?? ({ id: '', version: 0 } as Field));
   const [refusal, setRefusal] = useState<unknown>(null);
   const [moving, setMoving] = useState(false);
+  // The estate decides which fields can be this one's parent: its own, or the one chosen for a new field.
+  const [pickedEstate, setPickedEstate] = useState<string | null>(null);
+  const estateFields = useEstateFields(field?.estate_id ?? pickedEstate ?? '');
+  const parentOptions = (estateFields.data ?? [])
+    .filter((other) => other.id !== field?.id)
+    .map((other) => ({
+      id: other.id,
+      label: other.name ? `${other.field_number} · ${other.name}` : other.field_number,
+    }));
+  if (field?.parent_field && !parentOptions.some((option) => option.id === field.parent_field?.id))
+    parentOptions.push({ id: field.parent_field.id, label: field.parent_field.field_number });
 
   const schema = z
     .object({
@@ -180,6 +218,21 @@ function FieldForm({ field }: { readonly field: Field | null }) {
         .nullable()
         .refine((date) => date === null || date <= todayIso(), t('validation.notFuture')),
       remarks: z.string().trim().max(500),
+      field_type: z.enum(FIELD_TYPES),
+      parent_field_id: z.string().nullable(),
+      planting_year: z
+        .number()
+        .int()
+        .min(1800, t('field.yearRange', { max: thisYear() }))
+        .max(thisYear(), t('field.yearRange', { max: thisYear() }))
+        .nullable(),
+      tea_variety_id: z.string().nullable(),
+      spacing: z.string().trim().max(50),
+      altitude: z.string().trim().refine(twoPlaces('-1000', '30000'), t('field.altitudeInvalid')),
+      average_slope: z.string().trim().refine(twoPlaces('0', '90'), t('field.slopeInvalid')),
+      irrigation_source_id: z.string().nullable(),
+      soil_type_id: z.string().nullable(),
+      drainage_class_id: z.string().nullable(),
     })
     .refine((v) => !isNew || v.section_id !== null, {
       path: ['section_id'],
@@ -199,6 +252,16 @@ function FieldForm({ field }: { readonly field: Field | null }) {
       field_status: field?.field_status ?? 'producing',
       section_effective_from: null,
       remarks: field?.remarks ?? '',
+      field_type: field?.field_type ?? 'tea_field',
+      parent_field_id: field?.parent_field_id ?? null,
+      planting_year: field?.planting_year ?? null,
+      tea_variety_id: field?.tea_variety_id ?? null,
+      spacing: field?.spacing ?? '',
+      altitude: field?.altitude ?? '',
+      average_slope: field?.average_slope ?? '',
+      irrigation_source_id: field?.irrigation_source_id ?? null,
+      soil_type_id: field?.soil_type_id ?? null,
+      drainage_class_id: field?.drainage_class_id ?? null,
     },
   });
   const bind = {
@@ -210,6 +273,16 @@ function FieldForm({ field }: { readonly field: Field | null }) {
     field_status: useFormField(form.control, 'field_status'),
     section_effective_from: useFormField(form.control, 'section_effective_from'),
     remarks: useFormField(form.control, 'remarks'),
+    field_type: useFormField(form.control, 'field_type'),
+    parent_field_id: useFormField(form.control, 'parent_field_id'),
+    planting_year: useFormField(form.control, 'planting_year'),
+    tea_variety_id: useFormField(form.control, 'tea_variety_id'),
+    spacing: useFormField(form.control, 'spacing'),
+    altitude: useFormField(form.control, 'altitude'),
+    average_slope: useFormField(form.control, 'average_slope'),
+    irrigation_source_id: useFormField(form.control, 'irrigation_source_id'),
+    soil_type_id: useFormField(form.control, 'soil_type_id'),
+    drainage_class_id: useFormField(form.control, 'drainage_class_id'),
   };
   const readOnly = { isReadOnly: !canEdit };
 
@@ -221,6 +294,16 @@ function FieldForm({ field }: { readonly field: Field | null }) {
       planted_area: values.planted_area,
       field_status: values.field_status,
       remarks: blankToNull(values.remarks),
+      field_type: values.field_type,
+      parent_field_id: values.parent_field_id,
+      planting_year: values.planting_year,
+      tea_variety_id: values.tea_variety_id,
+      spacing: blankToNull(values.spacing),
+      altitude: blankToNull(values.altitude),
+      average_slope: blankToNull(values.average_slope),
+      irrigation_source_id: values.irrigation_source_id,
+      soil_type_id: values.soil_type_id,
+      drainage_class_id: values.drainage_class_id,
     };
     try {
       if (isNew) {
@@ -321,24 +404,52 @@ function FieldForm({ field }: { readonly field: Field | null }) {
             <LocationPicker
               sectionId={bind.section_id.value}
               onSection={bind.section_id.onChange}
+              onEstate={setPickedEstate}
               error={bind.section_id.error}
             />
           )}
         </Card>
         <Card title={t('field.details')} headingLevel={2}>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 xl:grid-cols-3">
+            <Input
+              label={t('field.name')}
+              placeholder={t('field.placeholders.name')}
+              autoComplete="off"
+              {...bind.name}
+              {...readOnly}
+            />
             <Input
               label={t('field.fieldNumber')}
-              hint={t('field.fieldNumberHint')}
+              placeholder={t('field.placeholders.code')}
               isRequired
               autoComplete="off"
               {...bind.field_number}
               {...readOnly}
             />
-            <Input label={t('field.name')} autoComplete="off" {...bind.name} {...readOnly} />
+            <Select
+              label={t('field.fieldType')}
+              isDisabled={!canEdit}
+              value={bind.field_type.value}
+              options={FIELD_TYPES.map((type) => ({ id: type, label: t(`fieldType.${type}`) }))}
+              onChange={(value) => {
+                const type = FIELD_TYPES.find((option) => option === value);
+                if (type) bind.field_type.onChange(type);
+              }}
+            />
+            <Select
+              label={t('field.parentField')}
+              placeholder={t('field.choose')}
+              isDisabled={!canEdit}
+              value={bind.parent_field_id.value ?? NONE}
+              options={[{ id: NONE, label: t('field.noParent') }, ...parentOptions]}
+              onChange={(value) => {
+                bind.parent_field_id.onChange(value === null || value === NONE ? null : value);
+              }}
+              {...(bind.parent_field_id.error ? { error: bind.parent_field_id.error } : {})}
+            />
             <AreaInput
               label={t('field.grossArea')}
-
+              placeholder="0.00"
               isRequired
               {...bind.gross_area}
               {...readOnly}
@@ -346,9 +457,74 @@ function FieldForm({ field }: { readonly field: Field | null }) {
             <AreaInput
               label={t('field.plantedArea')}
               hint={t('field.plantedAreaHint')}
-
+              placeholder="0.00"
               {...bind.planted_area}
               {...readOnly}
+            />
+            <NumberInput
+              label={t('field.plantingYear')}
+              placeholder={t('field.placeholders.year')}
+              formatOptions={{ useGrouping: false, maximumFractionDigits: 0 }}
+              minValue={1800}
+              maxValue={thisYear()}
+              {...bind.planting_year}
+              {...readOnly}
+            />
+            <LookupSelect
+              type="tea_variety"
+              label={t('field.bushType')}
+              value={bind.tea_variety_id.value}
+              current={field?.tea_variety ?? null}
+              isDisabled={!canEdit}
+              onChange={bind.tea_variety_id.onChange}
+              error={bind.tea_variety_id.error}
+            />
+            <Input
+              label={t('field.spacing')}
+              placeholder={t('field.placeholders.spacing')}
+              {...bind.spacing}
+              {...readOnly}
+            />
+            <Input
+              label={t('field.altitude')}
+              placeholder={t('field.placeholders.altitude')}
+              inputMode="decimal"
+              {...bind.altitude}
+              {...readOnly}
+            />
+            <Input
+              label={t('field.averageSlope')}
+              placeholder={t('field.placeholders.slope')}
+              inputMode="decimal"
+              {...bind.average_slope}
+              {...readOnly}
+            />
+            <LookupSelect
+              type="irrigation_source"
+              label={t('field.irrigationSource')}
+              value={bind.irrigation_source_id.value}
+              current={field?.irrigation_source ?? null}
+              isDisabled={!canEdit}
+              onChange={bind.irrigation_source_id.onChange}
+              error={bind.irrigation_source_id.error}
+            />
+            <LookupSelect
+              type="soil_type"
+              label={t('field.soilType')}
+              value={bind.soil_type_id.value}
+              current={field?.soil_type ?? null}
+              isDisabled={!canEdit}
+              onChange={bind.soil_type_id.onChange}
+              error={bind.soil_type_id.error}
+            />
+            <LookupSelect
+              type="drainage_class"
+              label={t('field.drainage')}
+              value={bind.drainage_class_id.value}
+              current={field?.drainage_class ?? null}
+              isDisabled={!canEdit}
+              onChange={bind.drainage_class_id.onChange}
+              error={bind.drainage_class_id.error}
             />
             <Select
               label={t('field.fieldStatus')}
@@ -371,9 +547,10 @@ function FieldForm({ field }: { readonly field: Field | null }) {
             ) : null}
             <Textarea
               label={t('field.remarks')}
-              rows={2}
+              placeholder={t('field.placeholders.remarks')}
+              rows={3}
               maxLength={500}
-              className="md:col-span-2"
+              className="sm:col-span-2 xl:col-span-3"
               {...bind.remarks}
               {...readOnly}
             />

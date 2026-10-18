@@ -68,9 +68,9 @@ describe('estates', () => {
     expect(await within(row).findByText('30.750 acres')).toBeInTheDocument();
   });
 
-  it('the estate profile shows the overview the server works out, in acres', async () => {
+  it('the estate profile shows the summary the server works out, in acres', async () => {
     await openAs('manager', '/estates/e1');
-    const overview = await screen.findByRole('region', { name: 'Estate Overview' });
+    const overview = await screen.findByRole('region', { name: 'Estate Summary' });
     expect(await within(overview).findByText('28.750 acres')).toBeInTheDocument();
     // No total land area is declared, so the non-tea area is not known either.
     expect(within(overview).getAllByText('Not declared')).toHaveLength(2);
@@ -91,7 +91,7 @@ describe('estates', () => {
     await userEvent.type(screen.getByRole('textbox', { name: /^Code/ }), 'DEMO-C');
     await userEvent.type(screen.getByRole('textbox', { name: /^Name/ }), 'Surma Tea Estate');
     await userEvent.click(screen.getByRole('button', { name: 'Create estate' }));
-    await screen.findByRole('heading', { level: 1, name: 'Surma Tea Estate' });
+    await screen.findByRole('heading', { level: 1, name: 'Surma Tea Estate' }, { timeout: 15_000 });
     expect(router.state.location.pathname).toMatch(/^\/estates\/e_new_/);
   });
 

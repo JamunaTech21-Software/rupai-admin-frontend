@@ -167,6 +167,13 @@ function EstateProfile({
         z.string().trim().max(150).regex(WEBSITE, t('profile.websiteFormat')),
       ]),
       total_area: z.string().nullable(),
+      tea_area: z.string().nullable(),
+      non_tea_area: z.string().nullable(),
+      division_count: z.number().int().min(0).nullable(),
+      section_count: z.number().int().min(0).nullable(),
+      field_count: z.number().int().min(0).nullable(),
+      worker_count: z.number().int().min(0).nullable(),
+      family_count: z.number().int().min(0).nullable(),
       amenity_ids: z.array(z.string()),
       other_amenities: z.string().trim().max(300),
       latitude: z.string().trim(),
@@ -189,6 +196,21 @@ function EstateProfile({
       }
       if ((values.latitude === '') !== (values.longitude === ''))
         issue([values.latitude === '' ? 'latitude' : 'longitude'], t('profile.bothCoordinates'));
+      const { total_area: total, tea_area: tea, non_tea_area: nonTea } = values;
+      if (total !== null && total !== '') {
+        if (tea !== null && tea !== '' && new Dec(tea).gt(total))
+          issue(['tea_area'], t('profile.overviewErrors.overTotal'));
+        if (nonTea !== null && nonTea !== '' && new Dec(nonTea).gt(total))
+          issue(['non_tea_area'], t('profile.overviewErrors.overTotal'));
+        if (
+          tea !== null &&
+          tea !== '' &&
+          nonTea !== null &&
+          nonTea !== '' &&
+          new Dec(tea).plus(nonTea).gt(total)
+        )
+          issue(['non_tea_area'], t('profile.overviewErrors.together'));
+      }
       for (const role of KEY_PEOPLE) {
         const p = values.people[role];
         if (!isBlank(p) && p.contact_name.trim() === '')
@@ -213,6 +235,13 @@ function EstateProfile({
     email: estate?.email ?? '',
     website: estate?.website ?? '',
     total_area: estate?.total_area ?? null,
+    tea_area: estate?.tea_area ?? null,
+    non_tea_area: estate?.non_tea_area ?? null,
+    division_count: estate?.division_count ?? null,
+    section_count: estate?.section_count ?? null,
+    field_count: estate?.field_count ?? null,
+    worker_count: estate?.worker_count ?? null,
+    family_count: estate?.family_count ?? null,
     amenity_ids: (estate?.amenities ?? []).map((a) => a.id),
     other_amenities: estate?.other_amenities ?? '',
     latitude: estate?.latitude ?? '',
@@ -241,6 +270,13 @@ function EstateProfile({
     email: useFormField(form.control, 'email'),
     website: useFormField(form.control, 'website'),
     total_area: useFormField(form.control, 'total_area'),
+    tea_area: useFormField(form.control, 'tea_area'),
+    non_tea_area: useFormField(form.control, 'non_tea_area'),
+    division_count: useFormField(form.control, 'division_count'),
+    section_count: useFormField(form.control, 'section_count'),
+    field_count: useFormField(form.control, 'field_count'),
+    worker_count: useFormField(form.control, 'worker_count'),
+    family_count: useFormField(form.control, 'family_count'),
     amenity_ids: useFormField(form.control, 'amenity_ids'),
     other_amenities: useFormField(form.control, 'other_amenities'),
     latitude: useFormField(form.control, 'latitude'),
@@ -275,6 +311,13 @@ function EstateProfile({
       address_line1: blankToNull(values.address_line1),
       district: blankToNull(values.district),
       total_area: values.total_area,
+      tea_area: blankToNull(values.tea_area ?? ''),
+      non_tea_area: blankToNull(values.non_tea_area ?? ''),
+      division_count: values.division_count,
+      section_count: values.section_count,
+      field_count: values.field_count,
+      worker_count: values.worker_count,
+      family_count: values.family_count,
       phone: blankToNull(values.phone),
       email: blankToNull(values.email),
       established_year: values.established_year,
@@ -642,7 +685,20 @@ function EstateProfile({
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
           <div className="flex min-w-0 flex-col gap-6 xl:col-span-8">
             {basic}
-            <EstateOverview estateId={estate?.id ?? ''} totalArea={bind.total_area} isReadOnly={!canEdit} />
+            <EstateOverview
+              estateId={estate?.id ?? ''}
+              bind={{
+                total_area: bind.total_area,
+                tea_area: bind.tea_area,
+                non_tea_area: bind.non_tea_area,
+                field_count: bind.field_count,
+                division_count: bind.division_count,
+                section_count: bind.section_count,
+                worker_count: bind.worker_count,
+                family_count: bind.family_count,
+              }}
+              isReadOnly={!canEdit}
+            />
             {managers}
             {facilities}
             {estate ? (
