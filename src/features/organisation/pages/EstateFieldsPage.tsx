@@ -233,13 +233,13 @@ function FieldsOfEstate({ estate }: { readonly estate: Estate }) {
                   label={t('estatePages.searchField')}
                   placeholder={t('estatePages.searchPlaceholder')}
                   type="search"
-                  className="w-full sm:w-56"
+                  className="min-w-36 flex-1"
                   value={search}
                   onChange={setSearch}
                 />
                 <Select
                   label={t('estatePages.division')}
-                  className="w-full sm:w-48"
+                  className="min-w-40 flex-[1.3]"
                   value={division}
                   options={[
                     { id: ALL, label: t('estatePages.allDivisions') },
@@ -251,7 +251,7 @@ function FieldsOfEstate({ estate }: { readonly estate: Estate }) {
                 />
                 <Select
                   label={t('estatePages.fieldType')}
-                  className="w-full sm:w-48"
+                  className="min-w-28 flex-1"
                   value={fieldType}
                   options={[
                     { id: ALL, label: t('estatePages.allFieldTypes') },
@@ -263,7 +263,7 @@ function FieldsOfEstate({ estate }: { readonly estate: Estate }) {
                 />
                 <Select
                   label={t('estatePages.fieldStatus')}
-                  className="w-full sm:w-48"
+                  className="min-w-28 flex-1"
                   value={fieldStatus}
                   options={[
                     { id: ALL, label: t('estatePages.allFieldStatuses') },

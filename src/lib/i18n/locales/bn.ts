@@ -848,7 +848,7 @@ export const bn: Resources = {
       allDivisions: 'সব ডিভিশন',
       status: 'অবস্থা',
       allStatuses: 'সব অবস্থা',
-      allFieldStatuses: 'ক্ষেত্রের সব অবস্থা',
+      allFieldStatuses: 'সব',
       sl: 'ক্রম',
       divisionName: 'ডিভিশনের নাম',
       sectionName: 'সেকশনের নাম',

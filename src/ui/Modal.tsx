@@ -47,7 +47,7 @@ function OverlayBody({
   return (
     <Dialog
       {...(description ? { 'aria-describedby': descriptionId } : {})}
-      className={cx('flex max-h-full flex-col outline-none', className)}
+      className={cx('flex max-h-full min-h-0 flex-1 flex-col outline-none', className)}
     >
       <div className="flex items-start justify-between gap-4 border-b border-line bg-card-header px-5 py-4 sm:px-6">
         <div className="flex min-w-0 flex-col gap-1">
