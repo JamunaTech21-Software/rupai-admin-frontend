@@ -36,6 +36,7 @@ type PageKey =
   | 'approvalExceptions'
   | 'workflows'
   | 'imports'
+  | 'systemHealth'
   | 'notificationRules'
   | 'delegations'
   | 'designTokens';
@@ -251,6 +252,13 @@ export const NAVIGATION: readonly AppNavSection[] = [
             href: '/approvals/exceptions',
             icon: 'alert',
             permission: 'workflow.view',
+          },
+          {
+            id: 'system-health',
+            labelKey: 'systemHealth',
+            href: '/admin/health',
+            icon: 'monitor',
+            permission: 'system.view',
           },
           { id: 'imports', labelKey: 'imports', href: '/imports', icon: 'upload' },
           { id: 'jobs', labelKey: 'jobs', href: '/jobs', icon: 'clock' },
