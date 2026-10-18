@@ -1,4 +1,4 @@
-import { Card, StatCard } from '@/ui';
+import { Card, cx, StatCard } from '@/ui';
 
 /** A card of figures under a list, as the design's summaries ("Division & Section Summary"). */
 export function SummaryStrip({
@@ -10,7 +10,12 @@ export function SummaryStrip({
 }) {
   return (
     <Card title={title} headingLevel={2}>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div
+        className={cx(
+          'grid grid-cols-2 gap-3 md:grid-cols-3',
+          items.length % 5 === 0 ? 'xl:grid-cols-5' : 'xl:grid-cols-6',
+        )}
+      >
         {items.map((item) => (
           <StatCard
             key={item.label}

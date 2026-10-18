@@ -5,9 +5,9 @@ import { NotFoundState, RefusalDialog } from '@/features/system';
 import { usePermission } from '@/lib/auth';
 import { describeError } from '@/lib/errors';
 import { useFormat, useTranslation } from '@/lib/i18n';
-import { Dec } from '@/lib/money';
 import { Button, Card, type DataColumn, DataTable, EmptyState, IconButton, Input, Select, Stack } from '@/ui';
 
+import { useEstateSummary } from '../api/estateProfile';
 import { useDivisions, useEstateSections } from '../api/hierarchy';
 import { type Division, type Estate, type NodeStatus, type Section, STATUSES } from '../api/schemas';
 import { useArea } from '../area';
@@ -104,7 +104,9 @@ function DivisionsAndSections({ estate }: { readonly estate: Estate }) {
   const canAddDivision = usePermission('division.create');
   const canAddSection = usePermission('section.create');
   const divisions = useDivisions(estate.id);
-  const sections = useEstateSections(divisions.data ?? []);
+  // Every section of the estate in one request; the figures under the lists come from the server.
+  const sections = useEstateSections(estate.id);
+  const figures = useEstateSummary(estate.id).data?.hierarchy;
   const [editor, setEditor] = useState<NodeEditor | null>(null);
   const [refusal, setRefusal] = useState<unknown>(null);
   const [divisionSearch, setDivisionSearch] = useState('');
@@ -115,8 +117,6 @@ function DivisionsAndSections({ estate }: { readonly estate: Estate }) {
 
   const allDivisions = divisions.data ?? [];
   const divisionName = new Map(allDivisions.map((d) => [d.id, d.name]));
-  const sectionCount = (division: Division) =>
-    sections.sections.filter((s) => s.division_id === division.id).length;
   const shownDivisions = allDivisions.filter(
     (d) =>
       matches(d, divisionSearch) && (divisionStatus === ALL || d.status === (divisionStatus as NodeStatus)),
@@ -130,6 +130,7 @@ function DivisionsAndSections({ estate }: { readonly estate: Estate }) {
   const chosenDivision = allDivisions.find((d) => d.id === sectionDivision);
   const isActive = estate.status === 'active';
 
+  const count = (value: number | undefined) => (value === undefined ? '…' : format.number(value));
   const areaCell = (value: string | null) =>
     value ? (
       <span className="whitespace-nowrap">{area.format(value)}</span>
@@ -164,7 +165,7 @@ function DivisionsAndSections({ estate }: { readonly estate: Estate }) {
       id: 'sections',
       header: t('estatePages.sections'),
       isNumeric: true,
-      cell: (d) => (sections.isPending ? '…' : format.number(sectionCount(d))),
+      cell: (d) => format.number(d.section_count),
     },
     { id: 'status', header: t('estatePages.status'), cell: (d) => <NodeStatusBadge status={d.status} /> },
     {
@@ -201,6 +202,16 @@ function DivisionsAndSections({ estate }: { readonly estate: Estate }) {
       header: t('estatePages.code'),
       cell: (s) => <span className="font-mono text-sm">{s.code}</span>,
     },
+    {
+      id: 'parent',
+      header: t('estatePages.parentSection'),
+      cell: (s) =>
+        s.parent_section ? (
+          s.parent_section.name
+        ) : (
+          <span className="text-fg-muted">{t('estatePages.noParent')}</span>
+        ),
+    },
     { id: 'area', header: t('estatePages.totalArea'), isNumeric: true, cell: (s) => areaCell(s.area) },
     { id: 'status', header: t('estatePages.status'), cell: (s) => <NodeStatusBadge status={s.status} /> },
     {
@@ -231,18 +242,6 @@ function DivisionsAndSections({ estate }: { readonly estate: Estate }) {
       }
     />
   );
-
-  // The figures: totals, the area the divisions add up to, and the average section.
-  const sumOf = (values: readonly (string | null)[]) =>
-    values.reduce((sum, value) => (value ? sum.plus(value) : sum), new Dec(0));
-  const totalArea = sumOf(allDivisions.map((d) => d.area));
-  const sectionsWithArea = sections.sections.filter((s) => s.area !== null);
-  const averageSection =
-    sectionsWithArea.length > 0
-      ? sumOf(sectionsWithArea.map((s) => s.area))
-          .div(sectionsWithArea.length)
-          .toFixed(3)
-      : null;
 
   return (
     <>
@@ -388,26 +387,24 @@ function DivisionsAndSections({ estate }: { readonly estate: Estate }) {
       <SummaryStrip
         title={t('estatePages.structureSummary')}
         items={[
-          { label: t('estatePages.totalDivisions'), value: format.number(allDivisions.length) },
-          { label: t('estatePages.totalSections'), value: format.number(sections.sections.length) },
+          { label: t('estatePages.totalDivisions'), value: count(figures?.divisions.total) },
+          { label: t('estatePages.totalSections'), value: count(figures?.sections.total) },
           {
             label: t('estatePages.totalArea'),
-            value: format.decimal(totalArea.toFixed(3), 3),
+            value: figures ? format.decimal(figures.division_area, 3) : '…',
             unit: area.unit,
           },
           {
             label: t('estatePages.averageSectionArea'),
-            value: averageSection ? format.decimal(averageSection, 3) : t('estatePages.notRecorded'),
-            ...(averageSection ? { unit: area.unit } : {}),
+            value: figures?.average_section_area
+              ? format.decimal(figures.average_section_area, 2)
+              : figures
+                ? t('estatePages.notRecorded')
+                : '…',
+            ...(figures?.average_section_area ? { unit: area.unit } : {}),
           },
-          {
-            label: t('estatePages.activeDivisions'),
-            value: format.number(allDivisions.filter((d) => d.status === 'active').length),
-          },
-          {
-            label: t('estatePages.activeSections'),
-            value: format.number(sections.sections.filter((s) => s.status === 'active').length),
-          },
+          { label: t('estatePages.activeDivisions'), value: count(figures?.divisions.active) },
+          { label: t('estatePages.activeSections'), value: count(figures?.sections.active) },
         ]}
       />
 

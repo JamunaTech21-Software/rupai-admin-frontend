@@ -19,6 +19,7 @@ import {
   type Estate,
   type Factory,
   type Field,
+  FIELD_TYPES,
   type Organisation,
   type Party,
   type Section,
@@ -60,6 +61,47 @@ interface MockPhoto {
   version: number;
 }
 
+/** A field with none of the R.3 details filled in. */
+const NO_DETAILS = {
+  field_type: 'tea_field',
+  parent_field_id: null,
+  parent_field: null,
+  planting_year: null,
+  tea_variety_id: null,
+  tea_variety: null,
+  spacing: null,
+  altitude: null,
+  average_slope: null,
+  irrigation_source_id: null,
+  irrigation_source: null,
+  soil_type_id: null,
+  soil_type: null,
+  drainage_class_id: null,
+  drainage_class: null,
+  created_by: { id: 'usr_manager', username: 'manager' },
+} as const;
+
+/** The lists the Field / Block form picks from (GET /lookups/{type}), as the backend seeds them. */
+export const MOCK_FIELD_LOOKUPS = {
+  tea_variety: [
+    { id: 'tv1', code: 'TV-1', name: 'TV-1' },
+    { id: 'tv2', code: 'TV-18', name: 'TV-18' },
+    { id: 'tv3', code: 'CLONE-6', name: 'Clone 6' },
+  ],
+  irrigation_source: [
+    { id: 'ir1', code: 'RAIN_FED', name: 'Rain fed' },
+    { id: 'ir2', code: 'TUBEWELL', name: 'Tube well' },
+  ],
+  soil_type: [
+    { id: 'so1', code: 'LOAM', name: 'Loam' },
+    { id: 'so2', code: 'CLAY', name: 'Clay loam' },
+  ],
+  drainage_class: [
+    { id: 'dr1', code: 'GOOD', name: 'Good' },
+    { id: 'dr2', code: 'POOR', name: 'Poor' },
+  ],
+} as const;
+
 const base = { status: 'active' as const, version: 1, created_at: NOW, updated_at: null };
 
 function seed(): Store {
@@ -93,6 +135,13 @@ function seed(): Store {
     description: null,
     amenities: [],
     other_amenities: null,
+    tea_area: null,
+    non_tea_area: null,
+    division_count: null,
+    section_count: null,
+    field_count: null,
+    worker_count: null,
+    family_count: null,
   });
   const division = (id: string, estate_id: string, code: string, name: string): Division => ({
     ...base,
@@ -102,6 +151,8 @@ function seed(): Store {
     name,
     manager_profile_id: null,
     area: null,
+    description: null,
+    section_count: 0,
   });
   const section = (
     id: string,
@@ -118,6 +169,9 @@ function seed(): Store {
     name,
     supervisor_profile_id: null,
     area: null,
+    parent_section_id: null,
+    parent_section: null,
+    description: null,
   });
   const field = (id: string, s: Section, field_number: string, gross: string, planted: string): Field => ({
     ...base,
@@ -132,6 +186,7 @@ function seed(): Store {
     field_status: 'producing',
     section_effective_from: '2025-01-01',
     remarks: null,
+    ...NO_DETAILS,
   });
   const sections = [
     section('s1', 'd1', 'e1', 'N1', 'North 1'),
@@ -175,8 +230,19 @@ function seed(): Store {
     ],
     sections,
     fields: [
-      field('f1', s1, 'A-N1-1', '12.500', '11.750'),
-      field('f2', s1, 'A-N1-2', '8.000', '8.000'),
+      {
+        ...field('f1', s1, 'A-N1-1', '12.500', '11.750'),
+        name: 'Block One',
+        planting_year: 1998,
+        tea_variety_id: 'tv1',
+        spacing: '4ft × 2.5ft',
+        altitude: '240.00',
+        average_slope: '5.00',
+        irrigation_source_id: 'ir1',
+        soil_type_id: 'so1',
+        drainage_class_id: 'dr1',
+      },
+      { ...field('f2', s1, 'A-N1-2', '8.000', '8.000'), field_type: 'nursery' },
       field('f3', s2, 'A-N2-1', '10.250', '9.000'),
       field('f4', s4, 'B-V1-1', '15.000', '14.500'),
     ],
@@ -332,7 +398,7 @@ function scopedPage(request: Request, rows: readonly Record<string, unknown>[]) 
   const url = new URL(request.url);
   const perPage = Math.min(
     Math.max(Number.parseInt(url.searchParams.get('per_page') ?? '25', 10) || 25, 1),
-    200,
+    1000,
   );
   const filtered = queryList(rows, request);
   const lastPage = Math.max(1, Math.ceil(filtered.length / perPage));
@@ -354,6 +420,42 @@ function scopedPage(request: Request, rows: readonly Record<string, unknown>[]) 
 }
 
 type NodePath = 'estates' | 'divisions' | 'sections' | 'fields' | 'factories' | 'warehouses' | 'parties';
+const lookupOf = (type: keyof typeof MOCK_FIELD_LOOKUPS, id: string | null) =>
+  MOCK_FIELD_LOOKUPS[type].find((row) => row.id === id) ?? null;
+
+/** A field as the server answers: the objects behind its ids, worked out from them. */
+const fieldOut = (f: Field): Field => {
+  const parent = store.fields.find((other) => other.id === f.parent_field_id);
+  return {
+    ...f,
+    parent_field: parent ? { id: parent.id, field_number: parent.field_number, name: parent.name } : null,
+    tea_variety: lookupOf('tea_variety', f.tea_variety_id),
+    irrigation_source: lookupOf('irrigation_source', f.irrigation_source_id),
+    soil_type: lookupOf('soil_type', f.soil_type_id),
+    drainage_class: lookupOf('drainage_class', f.drainage_class_id),
+  };
+};
+/** A division with its "Total Section": the active sections it has. */
+const divisionOut = (d: Division): Division => ({
+  ...d,
+  section_count: store.sections.filter((s) => s.division_id === d.id && s.status === 'active').length,
+});
+/** A section with the parent section behind its id. */
+const sectionOut = (sec: Section): Section => {
+  const parent = store.sections.find((other) => other.id === sec.parent_section_id);
+  return {
+    ...sec,
+    parent_section: parent ? { id: parent.id, code: parent.code, name: parent.name } : null,
+  };
+};
+/** What the server sends for one row of a hierarchy table. */
+const rowOut = (path: string, row: unknown) => {
+  if (path === 'fields') return fieldOut(row as Field);
+  if (path === 'divisions') return divisionOut(row as Division);
+  if (path === 'sections') return sectionOut(row as Section);
+  return row;
+};
+
 const tables = () => ({
   estates: store.estates,
   divisions: store.divisions,
@@ -420,6 +522,56 @@ const photoOut = (photo: MockPhoto) => ({
 const PIXEL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
+/** The server's checks on the R.3 field details; null when they hold. */
+function fieldProblems(body: Record<string, unknown>, ownId: string | null) {
+  const problems: { field: string; code: string; message: string }[] = [];
+  const year = body.planting_year;
+  if (typeof year === 'number' && year > new Date().getFullYear())
+    problems.push({ field: 'planting_year', code: 'NOT_FUTURE', message: 'Cannot be in the future.' });
+  const parent = body.parent_field_id;
+  if (typeof parent === 'string' && parent === ownId)
+    problems.push({
+      field: 'parent_field_id',
+      code: 'CYCLE',
+      message: 'A field cannot sit inside itself or one of its own blocks.',
+    });
+  return problems.length > 0
+    ? apiError(422, 'VALIDATION_FAILED', 'The request is not valid.', problems)
+    : null;
+}
+
+/** The figures under the Division & Section and Field / Block lists, as GET /estates/{id}/summary computes them. */
+function hierarchyOf(estateId: string) {
+  const counts = (rows: readonly { status: string }[]) => ({
+    total: rows.length,
+    active: rows.filter((r) => r.status === 'active').length,
+    inactive: rows.filter((r) => r.status !== 'active').length,
+  });
+  const divisions = store.divisions.filter((d) => d.estate_id === estateId);
+  const sections = store.sections.filter((x) => x.estate_id === estateId);
+  const fields = store.fields.filter((f) => f.estate_id === estateId);
+  const active = <T extends { status: string }>(rows: readonly T[]) =>
+    rows.filter((r) => r.status === 'active');
+  const sum = (values: readonly (string | null)[]) =>
+    values.reduce<InstanceType<typeof Dec>>((total, v) => (v ? total.plus(v) : total), new Dec('0'));
+  const withArea = active(sections).filter((x) => x.area !== null);
+  const sectionArea = sum(active(sections).map((x) => x.area));
+  const types = Object.fromEntries(
+    FIELD_TYPES.map((type) => [type, active(fields).filter((f) => f.field_type === type).length]),
+  );
+  return {
+    divisions: counts(divisions),
+    sections: counts(sections),
+    fields: counts(fields),
+    field_types: types,
+    division_area: sum(active(divisions).map((d) => d.area)).toFixed(3),
+    section_area: sectionArea.toFixed(3),
+    average_section_area: withArea.length > 0 ? sectionArea.div(withArea.length).toFixed(2) : null,
+    field_area: sum(active(fields).map((f) => f.gross_area)).toFixed(3),
+    planted_area: sum(active(fields).map((f) => f.planted_area)).toFixed(3),
+  };
+}
+
 function estateProfileMocks(b: string): RequestHandler[] {
   const estate = (id: unknown) => store.estates.find((e) => e.id === id);
   return [
@@ -432,22 +584,48 @@ function estateProfileMocks(b: string): RequestHandler[] {
       const tea = fields.reduce((sum, f) => sum.plus(f.planted_area ?? '0'), new Dec('0'));
       const gross = fields.reduce((sum, f) => sum.plus(f.gross_area), new Dec('0'));
       const divisions = store.divisions.filter((d) => d.estate_id === row.id);
-      return ok({
-        estate_id: row.id,
-        total_land_area: row.total_area,
-        tea_area: tea.toFixed(3),
-        non_tea_area: row.total_area
-          ? Dec.max(new Dec(row.total_area).minus(tea), new Dec('0')).toFixed(3)
-          : null,
-        field_area: gross.toFixed(3),
+      const computedCounts = {
         division_count: divisions.length,
         section_count: store.sections.filter((s) => divisions.some((d) => d.id === s.division_id)).length,
         field_count: fields.length,
+        worker_count: null,
+        family_count: null,
+      };
+      const computedNonTea = row.total_area
+        ? Dec.max(new Dec(row.total_area).minus(row.tea_area ?? tea), new Dec('0')).toFixed(3)
+        : null;
+      const entered = (key: keyof typeof computedCounts) => row[key];
+      const pick = (key: keyof typeof computedCounts) => entered(key) ?? computedCounts[key] ?? 0;
+      const source = (value: unknown) => (value === null ? 'computed' : 'entered');
+      return ok({
+        estate_id: row.id,
+        total_land_area: row.total_area,
+        tea_area: row.tea_area ?? tea.toFixed(3),
+        non_tea_area: row.non_tea_area ?? computedNonTea,
+        field_area: gross.toFixed(3),
+        division_count: pick('division_count'),
+        section_count: pick('section_count'),
+        field_count: pick('field_count'),
         factory_count: store.factories.filter((f) => f.primary_estate_id === row.id).length,
-        worker_count: 0,
-        family_count: 0,
+        worker_count: pick('worker_count'),
+        family_count: pick('family_count'),
         workforce_available: false,
         photo_count: store.photos.filter((p) => p.owner_id === row.id).length,
+        hierarchy: hierarchyOf(row.id),
+        source: {
+          tea_area: source(row.tea_area),
+          non_tea_area: source(row.non_tea_area),
+          division_count: source(row.division_count),
+          section_count: source(row.section_count),
+          field_count: source(row.field_count),
+          worker_count: source(row.worker_count),
+          family_count: source(row.family_count),
+        },
+        computed: {
+          tea_area: tea.toFixed(3),
+          non_tea_area: computedNonTea,
+          ...computedCounts,
+        },
       });
     }),
     http.get(`${b}/estates/:id/documents`, ({ request, params }) => {
@@ -720,6 +898,13 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
         description: null,
         amenities: [],
         other_amenities: null,
+        tea_area: null,
+        non_tea_area: null,
+        division_count: null,
+        section_count: null,
+        field_count: null,
+        worker_count: null,
+        family_count: null,
         code: body.code,
         name: body.name,
         ...withAmenities(body),
@@ -732,10 +917,7 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
       `${b}/estates/:id/divisions`,
       ({ request, params }) =>
         requireAuth(request) ??
-        scopedPage(
-          request,
-          store.divisions.filter((d) => d.estate_id === params.id),
-        ),
+        scopedPage(request, store.divisions.filter((d) => d.estate_id === params.id).map(divisionOut)),
     ),
     http.post(`${b}/estates/:id/divisions`, async ({ request, params }) => {
       const refused = requireAuth(request);
@@ -743,7 +925,12 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
       const estate = store.estates.find((e) => e.id === params.id);
       if (!estate) return notFound();
       if (estate.status !== 'active') return inactiveParent('estate_id', 'estate');
-      const body = (await request.json()) as { code: string; name: string; area: string | null };
+      const body = (await request.json()) as {
+        code: string;
+        name: string;
+        area: string | null;
+        description?: string | null;
+      };
       if (store.divisions.some((d) => d.estate_id === estate.id && d.code === body.code)) {
         return duplicate('code', 'A division with this code already exists in this estate.');
       }
@@ -752,19 +939,25 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
         id: nextId('d'),
         estate_id: estate.id,
         manager_profile_id: null,
+        description: null,
+        section_count: 0,
         ...body,
       };
       store.divisions.push(division);
-      return created(division, `${b}/divisions/${division.id}`, division.version);
+      return created(divisionOut(division), `${b}/divisions/${division.id}`, division.version);
     }),
     http.get(
       `${b}/divisions/:id/sections`,
       ({ request, params }) =>
         requireAuth(request) ??
-        scopedPage(
-          request,
-          store.sections.filter((s) => s.division_id === params.id),
-        ),
+        scopedPage(request, store.sections.filter((s) => s.division_id === params.id).map(sectionOut)),
+    ),
+    // Every section of an estate in one request (R.3).
+    http.get(
+      `${b}/sections`,
+      ({ request }) =>
+        requireAuth(request) ??
+        scopedPage(request, store.sections.filter((s) => visible(s.estate_id)).map(sectionOut)),
     ),
     http.post(`${b}/divisions/:id/sections`, async ({ request, params }) => {
       const refused = requireAuth(request);
@@ -772,7 +965,13 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
       const division = store.divisions.find((d) => d.id === params.id);
       if (!division) return notFound();
       if (division.status !== 'active') return inactiveParent('division_id', 'division');
-      const body = (await request.json()) as { code: string; name: string; area: string | null };
+      const body = (await request.json()) as {
+        code: string;
+        name: string;
+        area: string | null;
+        description?: string | null;
+        parent_section_id?: string | null;
+      };
       if (store.sections.some((s) => s.division_id === division.id && s.code === body.code)) {
         return duplicate('code', 'A section with this code already exists in this division.');
       }
@@ -782,10 +981,13 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
         division_id: division.id,
         estate_id: division.estate_id,
         supervisor_profile_id: null,
+        parent_section_id: null,
+        parent_section: null,
+        description: null,
         ...body,
       };
       store.sections.push(section);
-      return created(section, `${b}/sections/${section.id}`, section.version);
+      return created(sectionOut(section), `${b}/sections/${section.id}`, section.version);
     }),
 
     // ---- Fields ----
@@ -793,10 +995,7 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
       `${b}/fields`,
       ({ request }) =>
         requireAuth(request) ??
-        scopedPage(
-          request,
-          store.fields.filter((f) => visible(f.estate_id)),
-        ),
+        scopedPage(request, store.fields.filter((f) => visible(f.estate_id)).map(fieldOut)),
     ),
     http.post(`${b}/fields`, async ({ request }) => {
       const refused = requireAuth(request);
@@ -819,6 +1018,8 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
           { field: 'planted_area', code: 'TOO_LARGE', message: 'Cannot be larger than the gross area.' },
         ]);
       }
+      const detailProblems = fieldProblems(body, null);
+      if (detailProblems) return detailProblems;
       const field: Field = {
         ...base,
         id: nextId('f'),
@@ -829,11 +1030,12 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
         field_status: 'producing',
         remarks: null,
         section_effective_from: new Date().toISOString().slice(0, 10),
+        ...NO_DETAILS,
         ...body,
         created_at: new Date().toISOString(),
       };
       store.fields.push(field);
-      return created(field, `${b}/fields/${field.id}`, field.version);
+      return created(fieldOut(field), `${b}/fields/${field.id}`, field.version);
     }),
     http.post(`${b}/fields/:id/reassign-section`, async ({ request, params }) => {
       const field = store.fields.find((f) => f.id === params.id);
@@ -879,7 +1081,7 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
         const refused = requireAuth(request);
         if (refused) return refused;
         const row = (tables()[path] as { id: string; version: number }[]).find((r) => r.id === params.id);
-        return row ? ok(row, { version: row.version }) : notFound();
+        return row ? ok(rowOut(path, row), { version: row.version }) : notFound();
       }),
       ...(['put', 'patch'] as const).map((method) =>
         http[method](`${b}/${path}/:id`, async ({ request, params }) => {
@@ -889,6 +1091,32 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
           const refused = requireAuth(request) ?? requireIfMatch(request, row.version);
           if (refused) return refused;
           const body = (await request.json()) as Record<string, unknown>;
+          if (path === 'estates') {
+            const merged = { ...row, ...body } as unknown as Estate;
+            const total = merged.total_area;
+            const over = (value: string | null, field: string, message: string) =>
+              total !== null && value !== null && new Dec(value).gt(total)
+                ? [{ field, code: 'TOO_LARGE', message }]
+                : [];
+            const problems = [
+              ...over(merged.tea_area, 'tea_area', 'Cannot be more than the total land area.'),
+              ...over(merged.non_tea_area, 'non_tea_area', 'Cannot be more than the total land area.'),
+              ...(total !== null &&
+              merged.tea_area !== null &&
+              merged.non_tea_area !== null &&
+              new Dec(merged.tea_area).plus(merged.non_tea_area).gt(total)
+                ? [
+                    {
+                      field: 'non_tea_area',
+                      code: 'TOO_LARGE',
+                      message: 'Tea and non-tea area together cannot be more than the total.',
+                    },
+                  ]
+                : []),
+            ];
+            if (problems.length > 0)
+              return apiError(422, 'VALIDATION_FAILED', 'The request is not valid.', problems);
+          }
           if (
             path === 'fields' &&
             typeof body.planted_area === 'string' &&
@@ -904,8 +1132,12 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
               ]);
             }
           }
+          if (path === 'fields') {
+            const problems = fieldProblems(body, row.id);
+            if (problems) return problems;
+          }
           Object.assign(row, path === 'estates' ? withAmenities(body) : body);
-          return ok(touch(row), { version: row.version });
+          return ok(rowOut(path, touch(row)), { version: row.version });
         }),
       ),
       http.post(`${b}/${path}/:id/:action`, ({ request, params }) => {
@@ -917,7 +1149,7 @@ export function organisationMocks(apiBase = '/api/v1'): RequestHandler[] {
         const refused = requireAuth(request) ?? requireIfMatch(request, row.version);
         if (refused) return refused;
         row.status = params.action === 'deactivate' ? 'inactive' : 'active';
-        return ok(touch(row), { version: row.version });
+        return ok(rowOut(path, touch(row)), { version: row.version });
       }),
       http.delete(`${b}/${path}/:id`, ({ request, params }) => {
         const refused = requireAuth(request);

@@ -5,7 +5,6 @@ import { NotFoundState } from '@/features/system';
 import { usePermission } from '@/lib/auth';
 import { describeError } from '@/lib/errors';
 import { useFormat, useTranslation } from '@/lib/i18n';
-import { Dec } from '@/lib/money';
 import {
   Button,
   ButtonLink,
@@ -20,8 +19,16 @@ import {
   Select,
 } from '@/ui';
 
+import { useEstateSummary } from '../api/estateProfile';
 import { useDivisions, useEstateFields, useEstateSections } from '../api/hierarchy';
-import { type Estate, type Field, FIELD_STATUSES, type FieldStatus } from '../api/schemas';
+import {
+  type Estate,
+  type Field,
+  FIELD_STATUSES,
+  FIELD_TYPES,
+  type FieldStatus,
+  type FieldType,
+} from '../api/schemas';
 import { useArea } from '../area';
 import { EstateScreen } from '../components/EstateScreen';
 import { NodeStatusBadge } from '../components/NodeLifecycle';
@@ -34,9 +41,9 @@ const fieldLabel = (field: Field) =>
 
 /**
  * Estate Management → Field / Block (R.3): the estate's fields with filters, the chosen field's details beside
- * them, and the figures under them. Adding and editing a field opens the field's own page (P1.07). What the design
- * shows that the backend does not hold (field type, planting year, soil, drainage, slope, altitude, irrigation,
- * spacing, bush type, map shape) is left out until the backend has it.
+ * them (type, parent, planting year, bush type, spacing, altitude, slope, irrigation, soil, drainage, who added it),
+ * and the figures under them, which the server works out. Adding and editing a field opens the field's own page
+ * (P1.07). The map shape comes with Map & GIS (R.6).
  */
 function FieldsOfEstate({ estate }: { readonly estate: Estate }) {
   const { t } = useTranslation('org');
@@ -45,10 +52,12 @@ function FieldsOfEstate({ estate }: { readonly estate: Estate }) {
   const canCreate = usePermission('field.create');
   const fields = useEstateFields(estate.id);
   const divisions = useDivisions(estate.id);
-  const sections = useEstateSections(divisions.data ?? []);
+  const sections = useEstateSections(estate.id);
+  const figures = useEstateSummary(estate.id).data?.hierarchy;
   const [search, setSearch] = useState('');
   const [division, setDivision] = useState(ALL);
   const [fieldStatus, setFieldStatus] = useState(ALL);
+  const [fieldType, setFieldType] = useState(ALL);
   const [chosenId, setChosenId] = useState<string | null>(null);
 
   const all = fields.data ?? [];
@@ -59,7 +68,8 @@ function FieldsOfEstate({ estate }: { readonly estate: Estate }) {
         f.field_number.toLowerCase().includes(needle) ||
         (f.name ?? '').toLowerCase().includes(needle)) &&
       (division === ALL || f.division_id === division) &&
-      (fieldStatus === ALL || f.field_status === (fieldStatus as FieldStatus)),
+      (fieldStatus === ALL || f.field_status === (fieldStatus as FieldStatus)) &&
+      (fieldType === ALL || f.field_type === (fieldType as FieldType)),
   );
   const chosen = all.find((f) => f.id === chosenId) ?? null;
   const divisionName = new Map((divisions.data ?? []).map((d) => [d.id, d.name]));
@@ -86,7 +96,14 @@ function FieldsOfEstate({ estate }: { readonly estate: Estate }) {
       ),
     },
     {
+      id: 'field_type',
+      header: t('estatePages.fieldType'),
+      cell: (f) => t(`fieldType.${f.field_type}`),
+    },
+    {
       id: 'field_status',
+      canHide: true,
+      isHiddenByDefault: true,
       header: t('estatePages.fieldStatus'),
       cell: (f) => t(`fieldStatus.${f.field_status}`),
     },
@@ -126,6 +143,15 @@ function FieldsOfEstate({ estate }: { readonly estate: Estate }) {
         { term: t('field.name'), description: chosen.name ?? '' },
         { term: t('estatePages.division'), description: divisionName.get(chosen.division_id) ?? '' },
         { term: t('estatePages.section'), description: sectionName.get(chosen.section_id) ?? '' },
+        { term: t('estatePages.fieldType'), description: t(`fieldType.${chosen.field_type}`) },
+        {
+          term: t('field.parentField'),
+          description: chosen.parent_field
+            ? chosen.parent_field.name
+              ? `${chosen.parent_field.field_number} · ${chosen.parent_field.name}`
+              : chosen.parent_field.field_number
+            : '',
+        },
         { term: t('estatePages.totalArea'), description: area.format(chosen.gross_area), isNumeric: true },
         {
           term: t('estatePages.plantedArea'),
@@ -138,16 +164,36 @@ function FieldsOfEstate({ estate }: { readonly estate: Estate }) {
           term: t('estatePages.inSectionSince'),
           description: chosen.section_effective_from ? format.date(chosen.section_effective_from) : '',
         },
+        {
+          term: t('field.plantingYear'),
+          description: chosen.planting_year === null ? '' : String(chosen.planting_year),
+        },
+        { term: t('field.bushType'), description: chosen.tea_variety?.name ?? '' },
+        { term: t('field.spacing'), description: chosen.spacing ?? '' },
+        {
+          term: t('field.altitude'),
+          description: chosen.altitude ? format.decimal(chosen.altitude, 2) : '',
+          isNumeric: true,
+        },
+        {
+          term: t('field.averageSlope'),
+          description: chosen.average_slope ? format.decimal(chosen.average_slope, 2) : '',
+          isNumeric: true,
+        },
+        { term: t('field.irrigationSource'), description: chosen.irrigation_source?.name ?? '' },
+        { term: t('field.soilType'), description: chosen.soil_type?.name ?? '' },
+        { term: t('field.drainage'), description: chosen.drainage_class?.name ?? '' },
         { term: t('estatePages.remarks'), description: chosen.remarks ?? '' },
+        { term: t('field.createdBy'), description: chosen.created_by.username },
+        { term: t('field.createdOn'), description: format.dateTime(chosen.created_at) },
       ]
     : [];
 
   const fetchError = fields.error
     ? { ...describeError(fields.error), onRetry: () => void fields.refetch() }
     : null;
-  const sum = (values: readonly (string | null)[]) =>
-    values.reduce((total, value) => (value ? total.plus(value) : total), new Dec(0)).toFixed(3);
-  const countOf = (status: FieldStatus) => all.filter((f) => f.field_status === status).length;
+  const count = (value: number | undefined) => (value === undefined ? '…' : format.number(value));
+  const kind = (type: FieldType) => count(figures?.field_types[type]);
 
   return (
     <>
@@ -204,6 +250,18 @@ function FieldsOfEstate({ estate }: { readonly estate: Estate }) {
                   }}
                 />
                 <Select
+                  label={t('estatePages.fieldType')}
+                  className="w-full sm:w-48"
+                  value={fieldType}
+                  options={[
+                    { id: ALL, label: t('estatePages.allFieldTypes') },
+                    ...FIELD_TYPES.map((type) => ({ id: type, label: t(`fieldType.${type}`) })),
+                  ]}
+                  onChange={(next) => {
+                    setFieldType(next ?? ALL);
+                  }}
+                />
+                <Select
                   label={t('estatePages.fieldStatus')}
                   className="w-full sm:w-48"
                   value={fieldStatus}
@@ -230,6 +288,7 @@ function FieldsOfEstate({ estate }: { readonly estate: Estate }) {
                         setSearch('');
                         setDivision(ALL);
                         setFieldStatus(ALL);
+                        setFieldType(ALL);
                       }}
                     >
                       {t('estatePages.clearFilters')}
@@ -277,20 +336,24 @@ function FieldsOfEstate({ estate }: { readonly estate: Estate }) {
       <SummaryStrip
         title={t('estatePages.fieldSummary')}
         items={[
-          { label: t('estatePages.totalFields'), value: format.number(all.length) },
+          { label: t('estatePages.totalFields'), value: count(figures?.fields.total) },
+          { label: t('fieldType.tea_field'), value: kind('tea_field') },
+          { label: t('fieldType.nursery'), value: kind('nursery') },
+          { label: t('fieldType.extension'), value: kind('extension') },
+          { label: t('fieldType.infrastructure'), value: kind('infrastructure') },
+          { label: t('estatePages.drainArea'), value: kind('drain') },
           {
             label: t('estatePages.totalArea'),
-            value: format.decimal(sum(all.map((f) => f.gross_area)), 3),
+            value: figures ? format.decimal(figures.field_area, 3) : '…',
             unit: area.unit,
           },
           {
             label: t('estatePages.totalPlanted'),
-            value: format.decimal(sum(all.map((f) => f.planted_area)), 3),
+            value: figures ? format.decimal(figures.planted_area, 3) : '…',
             unit: area.unit,
           },
-          { label: t('fieldStatus.producing'), value: format.number(countOf('producing')) },
-          { label: t('fieldStatus.young'), value: format.number(countOf('young')) },
-          { label: t('fieldStatus.nursery'), value: format.number(countOf('nursery')) },
+          { label: t('estatePages.activeFields'), value: count(figures?.fields.active) },
+          { label: t('estatePages.inactiveFields'), value: count(figures?.fields.inactive) },
         ]}
       />
     </>

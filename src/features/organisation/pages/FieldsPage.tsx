@@ -56,6 +56,12 @@ export function FieldsPage() {
     },
     { id: 'estate', header: t('fields.columns.estate'), cell: (field) => estateName(field.estate_id) },
     {
+      id: 'field_type',
+      header: t('fields.columns.fieldType'),
+      canHide: true,
+      cell: (field) => t(`fieldType.${field.field_type}`),
+    },
+    {
       id: 'location',
       header: t('fields.columns.location'),
       canHide: true,
