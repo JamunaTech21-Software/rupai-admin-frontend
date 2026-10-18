@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { z } from 'zod';
 
 import { errorBehaviour, isApiError } from '@/lib/errors';
@@ -11,7 +12,13 @@ import { AreaInput } from './AreaInput';
 
 /** What the modal edits: a new division or section under a parent, or an existing one. */
 export type NodeEditor = { readonly kind: 'division' | 'section' } & (
-  | { readonly mode: 'create'; readonly parentId: string; readonly parentName: string }
+  | {
+      readonly mode: 'create';
+      /** Empty for a section whose division is chosen in the form (then `divisions` lists the choices). */
+      readonly parentId: string;
+      readonly parentName: string;
+      readonly divisions?: readonly Division[];
+    }
   | { readonly mode: 'edit'; readonly node: Division | Section }
 );
 
@@ -30,14 +37,17 @@ export function NodeModal(props: NodeModalProps) {
   const { t } = useTranslation('org');
   const { kind, onClose, onRefused } = props;
   const editing = props.mode === 'edit' ? props.node : null;
-  const create = useCreateNode(kind, props.mode === 'create' ? props.parentId : '');
+  // A section added without a division chosen on the page picks its division here.
+  const [pickedDivision, setPickedDivision] = useState(props.mode === 'create' ? props.parentId : '');
+  const create = useCreateNode(kind, pickedDivision);
+  const [divisionError, setDivisionError] = useState<string | undefined>();
   const update = useUpdateNode(kind, editing ?? ({ id: '', version: 0 } as Division));
   const pending = create.isPending || update.isPending;
   // A section's parent can be any other section of its division.
   const divisionId =
     kind === 'section'
       ? props.mode === 'create'
-        ? props.parentId
+        ? pickedDivision
         : (props.node as Section).division_id
       : '';
   const siblings = useSections(divisionId);
@@ -76,6 +86,10 @@ export function NodeModal(props: NodeModalProps) {
   const parentSection = useFormField(form.control, 'parent_section_id');
 
   const submit = form.handleSubmit(async (values) => {
+    if (!editing && kind === 'section' && pickedDivision === '') {
+      setDivisionError(t('structure.divisionRequired'));
+      return;
+    }
     const input = {
       code: values.code.trim(),
       name: values.name.trim(),
@@ -109,7 +123,9 @@ export function NodeModal(props: NodeModalProps) {
     title =
       kind === 'division'
         ? t('structure.newDivision', { estate: props.parentName })
-        : t('structure.newSection', { division: props.parentName });
+        : props.parentId === ''
+          ? t('structure.newSectionAny')
+          : t('structure.newSection', { division: props.parentName });
   } else {
     title =
       kind === 'division'
@@ -147,6 +163,23 @@ export function NodeModal(props: NodeModalProps) {
           void submit(event);
         }}
       >
+        {props.mode === 'create' && kind === 'section' && props.parentId === '' ? (
+          <Select
+            label={t('structure.division')}
+            isRequired
+            placeholder={t('field.choose')}
+            value={pickedDivision === '' ? null : pickedDivision}
+            options={(props.divisions ?? [])
+              .filter((division) => division.status === 'active')
+              .map((division) => ({ id: division.id, label: `${division.code} · ${division.name}` }))}
+            onChange={(value) => {
+              setPickedDivision(value ?? '');
+              setDivisionError(undefined);
+              parentSection.onChange(null);
+            }}
+            {...(divisionError ? { error: divisionError } : {})}
+          />
+        ) : null}
         <Input label={t('structure.code')} isRequired autoComplete="off" {...code} />
         <Input label={t('structure.name')} isRequired autoComplete="off" {...name} />
         <AreaInput label={t('structure.area')} placeholder="0.00" {...area} />

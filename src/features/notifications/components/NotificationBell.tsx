@@ -22,7 +22,6 @@ export function NotificationBell() {
   const readAll = useReadAll();
   const [refusal, setRefusal] = useState<unknown>(null);
   const unread = summary.data?.unread ?? 0;
-  const critical = (summary.data?.unread_critical ?? 0) > 0;
   const rows = recent.data ?? [];
 
   async function markAllRead() {
@@ -71,8 +70,8 @@ export function NotificationBell() {
           <span
             aria-hidden="true"
             className={cx(
-              'text-white pointer-events-none absolute -end-0.5 -top-0.5 flex min-w-4.5 items-center justify-center rounded-full px-1 text-2xs leading-4.5 font-semibold figures',
-              critical ? 'bg-danger' : 'bg-primary',
+              'pointer-events-none absolute -end-0.5 -top-0.5 flex min-w-4.5 items-center justify-center rounded-full px-1 text-2xs leading-4.5 font-semibold text-fg-inverse figures',
+              'bg-danger',
             )}
           >
             {unread > 99 ? '99+' : unread}

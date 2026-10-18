@@ -10,6 +10,8 @@ export const handlers: RequestHandler[] = [
   http.get('*/api/v1/lookups', () => HttpResponse.json({ data: {}, meta: { request_id: 'test' } })),
   // The top bar asks for the user's running jobs; no job unless a test starts one.
   http.get('*/api/v1/jobs', () => HttpResponse.json({ data: [], meta: { request_id: 'test' } })),
+  // …and for which imports a list may offer; none unless a test brings the import mocks.
+  http.get('*/api/v1/imports/types', () => HttpResponse.json({ data: [], meta: { request_id: 'test' } })),
   // …and for the bell's unread count; none unless a test brings the notification mocks.
   http.get('*/api/v1/notifications/summary', () =>
     HttpResponse.json({
