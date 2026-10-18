@@ -103,7 +103,7 @@ describe('field / block', () => {
     const table = await screen.findByRole('table', { name: 'Fields / blocks' });
     expect(await within(table).findByText('Nursery')).toBeInTheDocument();
     await userEvent.click(
-      await within(table).findByRole('button', { name: 'Details of A-N1-1 · Block One' }),
+      await within(table).findByRole('button', { name: /Details of A-N1-1 · Block One/ }),
     );
     const details = await screen.findByRole('region', { name: 'Field / Block Details (A-N1-1 · Block One)' });
     for (const text of [
@@ -125,13 +125,13 @@ describe('field / block', () => {
   it('filters by field type', async () => {
     await openAs('manager', '/estates/e1/fields');
     const table = await screen.findByRole('table', { name: 'Fields / blocks' });
-    await within(table).findByText('A-N1-1', { exact: false });
+    await within(table).findByRole('button', { name: /Details of A-N1-1/ });
     await userEvent.click(screen.getByRole('button', { name: /Field type$/ }));
     await userEvent.click(await screen.findByRole('option', { name: 'Nursery' }));
     await waitFor(() => {
-      expect(within(table).queryByText('A-N1-1', { exact: false })).not.toBeInTheDocument();
+      expect(within(table).queryByRole('button', { name: /Details of A-N1-1/ })).not.toBeInTheDocument();
     });
-    expect(within(table).getByText('A-N1-2', { exact: false })).toBeInTheDocument();
+    expect(within(table).getByRole('button', { name: /Details of A-N1-2/ })).toBeInTheDocument();
   });
 
   it('shows the figures under the list from the server, by field type', async () => {

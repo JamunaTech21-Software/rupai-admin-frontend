@@ -1,3 +1,4 @@
+import type { Geometry } from 'geojson';
 import { http, HttpResponse, type RequestHandler } from 'msw';
 
 import {
@@ -35,6 +36,32 @@ import {
 
 const NOW = '2026-01-01T04:00:00.000Z';
 
+/** A square of `size` degrees with its south-west corner at (lng, lat): enough of a shape for a map. */
+function square(lng: number, lat: number, size: number): Geometry {
+  return {
+    type: 'Polygon',
+    coordinates: [
+      [
+        [lng, lat],
+        [lng + size, lat],
+        [lng + size, lat + size],
+        [lng, lat + size],
+        [lng, lat],
+      ],
+    ],
+  };
+}
+
+const ACRES_PER_DEG2 = 24_500_000;
+const mappedAcres = (geometry: Geometry) => {
+  if (geometry.type !== 'Polygon') return null;
+  const ring = geometry.coordinates[0] ?? [];
+  const xs = ring.map((point) => point[0] ?? 0);
+  const ys = ring.map((point) => point[1] ?? 0);
+  const area = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys));
+  return (area * ACRES_PER_DEG2).toFixed(3);
+};
+
 interface Store {
   organisation: Organisation;
   estates: Estate[];
@@ -50,6 +77,10 @@ interface Store {
   contacts: Contact[];
   /** Estate photographs (R.2): documents of type Photograph. */
   photos: MockPhoto[];
+  /** Drawn shapes by field id (R.3 GIS), as GeoJSON; a field without one is not mapped yet. */
+  shapes: Record<string, Geometry>;
+  /** Section outlines by section id. */
+  outlines: Record<string, Geometry>;
 }
 
 interface MockPhoto {
@@ -79,6 +110,12 @@ const NO_DETAILS = {
   drainage_class_id: null,
   drainage_class: null,
   created_by: { id: 'usr_manager', username: 'manager' },
+  has_boundary: false,
+  centroid: null,
+  perimeter_km: null,
+  mapped_area_acres: null,
+  area_difference_pct: null,
+  boundary_warning: null,
 } as const;
 
 /** The lists the Field / Block form picks from (GET /lookups/{type}), as the backend seeds them. */
@@ -247,6 +284,11 @@ function seed(): Store {
       field('f4', s4, 'B-V1-1', '15.000', '14.500'),
     ],
     sequence: 0,
+    shapes: {
+      f1: square(90.4, 23.7, 0.004),
+      f2: square(90.41, 23.7, 0.003),
+    },
+    outlines: { s1: square(90.4, 23.7, 0.012) },
     scope: null,
     factories: [
       {
@@ -426,8 +468,13 @@ const lookupOf = (type: keyof typeof MOCK_FIELD_LOOKUPS, id: string | null) =>
 /** A field as the server answers: the objects behind its ids, worked out from them. */
 const fieldOut = (f: Field): Field => {
   const parent = store.fields.find((other) => other.id === f.parent_field_id);
+  const shape = store.shapes[f.id];
   return {
     ...f,
+    has_boundary: shape !== undefined,
+    mapped_area_acres: shape ? mappedAcres(shape) : null,
+    perimeter_km: shape ? '2.150' : null,
+    centroid: shape ? { latitude: '23.7020', longitude: '90.4020' } : null,
     parent_field: parent ? { id: parent.id, field_number: parent.field_number, name: parent.name } : null,
     tea_variety: lookupOf('tea_variety', f.tea_variety_id),
     irrigation_source: lookupOf('irrigation_source', f.irrigation_source_id),
@@ -574,7 +621,118 @@ function hierarchyOf(estateId: string) {
 
 function estateProfileMocks(b: string): RequestHandler[] {
   const estate = (id: unknown) => store.estates.find((e) => e.id === id);
+  const boundaryOut = (f: Field) => {
+    const out = fieldOut(f);
+    const shape = store.shapes[f.id] ?? null;
+    return {
+      field_id: f.id,
+      boundary: shape,
+      centroid: out.centroid,
+      perimeter_km: out.perimeter_km,
+      mapped_area_acres: out.mapped_area_acres,
+      gross_area: f.gross_area,
+      area_difference_pct: shape ? '4.2' : null,
+      boundary_warning: null,
+      version: f.version,
+    };
+  };
   return [
+    http.get(`${b}/estates/:id/map`, ({ request, params }) => {
+      const refused = requireAuth(request);
+      if (refused) return refused;
+      const row = estate(params.id);
+      if (!row) return notFound();
+      const fields = store.fields.filter((f) => f.estate_id === row.id);
+      const features = [
+        ...store.sections
+          .filter((section) => section.estate_id === row.id && store.outlines[section.id])
+          .map((section) => ({
+            id: `section-${section.id}`,
+            type: 'Feature',
+            geometry: store.outlines[section.id],
+            properties: { layer: 'section', id: section.id, name: section.name },
+          })),
+        ...fields
+          .filter((f) => store.shapes[f.id])
+          .map((f) => ({
+            id: `field-${f.id}`,
+            type: 'Feature',
+            geometry: store.shapes[f.id],
+            properties: {
+              layer: f.field_type === 'drain' ? 'drain' : 'field',
+              id: f.id,
+              code: f.field_number,
+              name: f.name,
+              field_type: f.field_type,
+              field_status: f.field_status,
+              status: f.status,
+              gross_area: f.gross_area,
+              planted_area: f.planted_area,
+              section_name: store.sections.find((section) => section.id === f.section_id)?.name ?? '',
+              division_name: store.divisions.find((d) => d.id === f.division_id)?.name ?? '',
+            },
+          })),
+      ];
+      return ok({
+        estate: {
+          id: row.id,
+          code: row.code,
+          name: row.name,
+          latitude: row.latitude,
+          longitude: row.longitude,
+        },
+        bbox: features.length > 0 ? [90.4, 23.7, 90.413, 23.712] : null,
+        features,
+        unmapped_field_ids: fields.filter((f) => !store.shapes[f.id]).map((f) => f.id),
+      });
+    }),
+    http.get(`${b}/fields/:id/boundary`, ({ request, params }) => {
+      const refused = requireAuth(request);
+      if (refused) return refused;
+      const f = store.fields.find((x) => x.id === params.id);
+      return f ? ok(boundaryOut(f), { version: f.version }) : notFound();
+    }),
+    http.put(`${b}/fields/:id/boundary`, async ({ request, params }) => {
+      const f = store.fields.find((x) => x.id === params.id);
+      if (!f) return notFound();
+      const refused = requireAuth(request) ?? requireIfMatch(request, f.version);
+      if (refused) return refused;
+      const body = (await request.json()) as {
+        boundary?: Geometry | null;
+        kml?: string;
+        points?: { latitude: number; longitude: number }[];
+      };
+      if (body.kml !== undefined && !body.kml.includes('<coordinates>'))
+        return apiError(422, 'VALIDATION_FAILED', 'The request is not valid.', [
+          { field: 'kml', code: 'INVALID', message: 'The file has no shape in it.' },
+        ]);
+      if (body.points?.some((point) => point.longitude < 88 || point.longitude > 93))
+        return apiError(422, 'VALIDATION_FAILED', 'The request is not valid.', [
+          {
+            field: 'points',
+            code: 'OUTSIDE_COUNTRY',
+            message: 'A point is outside Bangladesh (check latitude / longitude order).',
+          },
+        ]);
+      const shape: Geometry | null =
+        body.boundary !== undefined
+          ? body.boundary
+          : body.points
+            ? {
+                type: 'Polygon',
+                coordinates: [
+                  [
+                    ...body.points.map((point) => [point.longitude, point.latitude]),
+                    [body.points[0]?.longitude ?? 0, body.points[0]?.latitude ?? 0],
+                  ],
+                ],
+              }
+            : square(90.4, 23.7, 0.002);
+      if (shape) store.shapes[f.id] = shape;
+      else store.shapes = Object.fromEntries(Object.entries(store.shapes).filter(([id]) => id !== f.id));
+      f.version += 1;
+      return ok(boundaryOut(f), { version: f.version });
+    }),
     http.get(`${b}/estates/:id/summary`, ({ request, params }) => {
       const refused = requireAuth(request);
       if (refused) return refused;

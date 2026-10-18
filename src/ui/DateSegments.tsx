@@ -27,7 +27,7 @@ export function Segments({
         <DateSegment
           segment={segment}
           className={cx(
-            'rounded-sm px-0.5 text-base text-fg tabular-nums figures outline-none',
+            'rounded-sm px-0.5 text-base text-fg tabular-nums figures outline-none sm:text-sm',
             'data-placeholder:text-fg-subtle',
             'data-[type=literal]:px-0 data-[type=literal]:text-fg-muted',
             'data-focused:bg-primary data-focused:text-fg-on-primary',

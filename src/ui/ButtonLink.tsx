@@ -8,7 +8,7 @@ import { type IconName } from './iconSet';
 
 const SIZE: Record<ButtonSize, string> = {
   sm: 'text-sm px-3 min-h-(--size-touch-target) md:min-h-0 md:h-8',
-  md: 'text-base px-4 min-h-(--size-touch-target) md:min-h-0 md:h-(--size-control)',
+  md: 'text-sm px-4 min-h-(--size-touch-target) md:min-h-0 md:h-(--size-control)',
   lg: 'text-lg px-5 min-h-(--size-touch-target)',
 };
 

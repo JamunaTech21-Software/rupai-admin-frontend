@@ -179,6 +179,13 @@ export const FieldSchema = z.object({
   drainage_class: LookupRef.nullable(),
   /** Who added the field ("Created By"). */
   created_by: z.object({ id: z.string(), username: z.string() }),
+  /** The shape is read at /fields/{id}/boundary; these say whether there is one and what it measures. */
+  has_boundary: z.boolean(),
+  centroid: z.object({ latitude: z.string(), longitude: z.string() }).nullable(),
+  perimeter_km: z.string().nullable(),
+  mapped_area_acres: z.string().nullable(),
+  area_difference_pct: z.string().nullable(),
+  boundary_warning: z.string().nullable(),
   version: z.number(),
   created_at: z.string(),
   updated_at: z.string().nullable(),
