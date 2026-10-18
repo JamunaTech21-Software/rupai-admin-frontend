@@ -15,6 +15,7 @@ import { expiringDocumentsRoutes } from '@/features/documents';
 import { homeRoutes } from '@/features/home';
 import { notificationRoutes, notificationRuleRoutes } from '@/features/notifications';
 import { allApprovalRoutes, approvalRoutes, delegationRoutes } from '@/features/approvals';
+import { healthRoutes } from '@/features/health';
 import { importRoutes } from '@/features/imports';
 import { jobRoutes, scheduleRoutes } from '@/features/jobs';
 import { workflowCreateRoutes, workflowEditRoutes, workflowRoutes } from '@/features/workflows';
@@ -114,6 +115,7 @@ export const routes: RouteObject[] = [
               { element: <RequirePermission permission="workflow.view" />, children: workflowRoutes },
               { element: <RequirePermission permission="workflow.create" />, children: workflowCreateRoutes },
               { element: <RequirePermission permission="workflow.edit" />, children: workflowEditRoutes },
+              { element: <RequirePermission permission="system.view" />, children: healthRoutes },
               // Everyone may import what the server offers them: it decides per type.
               ...importRoutes,
               // Everyone has their own notifications; the rules are for those who may view them.

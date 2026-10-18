@@ -4,6 +4,7 @@ import { loadAdminMocks } from '@/features/admin';
 import { loadApprovalsMocks } from '@/features/approvals';
 import { loadConfigurationMocks } from '@/features/configuration';
 import { loadDocumentsMocks } from '@/features/documents';
+import { loadHealthMocks } from '@/features/health';
 import { loadImportsMocks } from '@/features/imports';
 import { loadJobsMocks } from '@/features/jobs';
 import { loadNotificationsMocks } from '@/features/notifications';
@@ -24,6 +25,7 @@ const FEATURE_MOCKS: Record<string, () => Promise<{ handlers: RequestHandler[] }
   jobs: loadJobsMocks,
   approvals: loadApprovalsMocks,
   imports: loadImportsMocks,
+  health: loadHealthMocks,
   notifications: loadNotificationsMocks,
   workflows: loadWorkflowsMocks,
   admin: loadAdminMocks,
