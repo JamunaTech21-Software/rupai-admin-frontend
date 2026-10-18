@@ -35,6 +35,7 @@ type PageKey =
   | 'allApprovals'
   | 'approvalExceptions'
   | 'workflows'
+  | 'imports'
   | 'notificationRules'
   | 'delegations'
   | 'designTokens';
@@ -251,6 +252,7 @@ export const NAVIGATION: readonly AppNavSection[] = [
             icon: 'alert',
             permission: 'workflow.view',
           },
+          { id: 'imports', labelKey: 'imports', href: '/imports', icon: 'upload' },
           { id: 'jobs', labelKey: 'jobs', href: '/jobs', icon: 'clock' },
           {
             id: 'recurring-jobs',

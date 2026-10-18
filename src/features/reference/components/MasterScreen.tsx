@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from 'react';
 
+import { ImportButton } from '@/features/imports';
 import { PermissionNotice, RefusalDialog } from '@/features/system';
 import { usePermission } from '@/lib/auth';
 import { useFormat, useTranslation } from '@/lib/i18n';
@@ -207,14 +208,17 @@ export function MasterScreen({ type, breadcrumbs, children }: MasterScreenProps)
   ];
 
   const add = canCreate ? (
-    <Button
-      iconStart="plus"
-      onPress={() => {
-        setEditing('new');
-      }}
-    >
-      {t('list.add', { type: one })}
-    </Button>
+    <span className="flex flex-wrap items-center gap-2">
+      <ImportButton type={`lookup.${type.key}`} />
+      <Button
+        iconStart="plus"
+        onPress={() => {
+          setEditing('new');
+        }}
+      >
+        {t('list.add', { type: one })}
+      </Button>
+    </span>
   ) : undefined;
 
   return (

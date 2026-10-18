@@ -139,8 +139,8 @@ describe('divisions and sections', () => {
     await within(sections).findByText('North 1');
     await within(sections).findByText('North 2');
 
-    // A section is added to the division chosen in the filter.
-    expect(screen.queryByRole('button', { name: 'Add section' })).not.toBeInTheDocument();
+    // The button is always there; a division chosen in the filter is its default.
+    expect(screen.getByRole('button', { name: 'Add section' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /Division$/ }));
     await userEvent.click(await screen.findByRole('option', { name: 'N · North' }));
     expect(await screen.findByRole('heading', { name: 'Section List (North)' })).toBeInTheDocument();

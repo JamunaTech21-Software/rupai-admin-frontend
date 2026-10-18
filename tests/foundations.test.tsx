@@ -159,6 +159,7 @@ describe('permissions', () => {
       'settings',
       'all-approvals',
       'approval-exceptions',
+      'imports',
       'jobs',
       'recurring-jobs',
       'design-tokens',

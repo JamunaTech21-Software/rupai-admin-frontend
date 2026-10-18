@@ -309,7 +309,7 @@ function DivisionsAndSections({ estate }: { readonly estate: Estate }) {
         }
         headingLevel={2}
         actions={
-          canAddSection && chosenDivision?.status === 'active' ? (
+          canAddSection && isActive && allDivisions.some((d) => d.status === 'active') ? (
             <Button
               size="sm"
               iconStart="plus"
@@ -317,8 +317,10 @@ function DivisionsAndSections({ estate }: { readonly estate: Estate }) {
                 setEditor({
                   kind: 'section',
                   mode: 'create',
-                  parentId: chosenDivision.id,
-                  parentName: chosenDivision.name,
+                  // The division chosen in the filter, or none: the form then asks.
+                  parentId: chosenDivision?.status === 'active' ? chosenDivision.id : '',
+                  parentName: chosenDivision?.name ?? '',
+                  divisions: allDivisions,
                 });
               }}
             >
@@ -377,11 +379,6 @@ function DivisionsAndSections({ estate }: { readonly estate: Estate }) {
             )
           }
         />
-        {canAddSection && !chosenDivision && allDivisions.length > 0 ? (
-          <p className="border-t border-line px-4 py-3 text-sm text-fg-muted sm:px-6">
-            {t('estatePages.addSectionHint')}
-          </p>
-        ) : null}
       </Card>
 
       <SummaryStrip

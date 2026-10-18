@@ -272,8 +272,46 @@ export function createApiClient(options: ApiClientOptions) {
     };
   }
 
+  /**
+   * A file the API answers with (a template, an error report): fetched with the bearer token, the session refreshed
+   * once if it expired, and handed back as a Blob with the name the server gave it. A refusal is the usual ApiError.
+   */
+  async function download(
+    path: string,
+    opts: { readonly query?: RequestOptions<never>['query']; readonly signal?: AbortSignal } = {},
+  ): Promise<{ readonly blob: Blob; readonly fileName: string | null }> {
+    const query = toQueryString(opts.query);
+    const url = query ? `${path}?${query}` : path;
+    const init: RequestInit = {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      ...(opts.signal ? { signal: opts.signal } : {}),
+    };
+    const tokenUsed = getAccessToken();
+    let response = await send(url, init, tokenUsed);
+    if (response.status === 401) {
+      const first = toApiError(401, await readJson(response), response.headers.get('X-Request-Id'), null);
+      if (!REFRESHABLE.has(first.code)) throw first;
+      const alreadyRefreshed = getAccessToken() !== null && getAccessToken() !== tokenUsed;
+      if (!(alreadyRefreshed || (await refreshOnce()))) {
+        endSession('expired');
+        throw first;
+      }
+      response = await send(url, init, getAccessToken());
+    }
+    if (!response.ok) {
+      throw toApiError(response.status, await readJson(response), response.headers.get('X-Request-Id'), null);
+    }
+    const named = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(
+      response.headers.get('Content-Disposition') ?? '',
+    );
+    return { blob: await response.blob(), fileName: named?.[1] ? decodeURIComponent(named[1]) : null };
+  }
+
   return {
     request,
+    download,
     get: <T>(path: string, opts: Omit<RequestOptions<T>, 'method' | 'body'> = {}) =>
       request<T>(path, { ...opts, method: 'GET' }),
     post: <T>(path: string, body?: unknown, opts: Omit<RequestOptions<T>, 'method' | 'body'> = {}) =>

@@ -194,3 +194,23 @@ describe('field / block', () => {
     });
   }, 60_000);
 });
+
+describe('add section', () => {
+  it('is available before a division is chosen, and asks which division in the form', async () => {
+    await openAs('manager', '/estates/e1/divisions');
+    const sections = await screen.findByRole('table', { name: 'Sections' });
+    await within(sections).findByText('North 1');
+    await userEvent.click(screen.getByRole('button', { name: 'Add section' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add section' });
+    // Without a division it cannot be saved.
+    await userEvent.type(within(dialog).getByRole('textbox', { name: /^Code/ }), 'S2');
+    await userEvent.type(within(dialog).getByRole('textbox', { name: /^Name/ }), 'South 2');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+    expect(await within(dialog).findByText('Choose the division of the section.')).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: /Division/ }));
+    await userEvent.click(await screen.findByRole('option', { name: 'S · South' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+    const row = await rowOf(sections, 'South 2');
+    expect(within(row).getByText('South')).toBeInTheDocument();
+  }, 60_000);
+});
