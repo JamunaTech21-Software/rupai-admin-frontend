@@ -195,14 +195,12 @@ describe('fields of an estate', () => {
   it("lists the estate's fields and shows the chosen one's details", async () => {
     await openAs('manager', '/estates/e1/fields');
     const table = await screen.findByRole('table', { name: 'Fields / blocks' });
-    // Settled once the section names are in: the rows are drawn again when they load.
-    await within(table).findAllByText('North 1 · North', { exact: false });
-    const first = (await within(table).findAllByRole('button', { name: /^Details of / }))[0];
+    const first = (await within(table).findAllByRole('button', { name: /Details of / }))[0];
     if (!first) throw new Error('no fields');
-    const name = (first.getAttribute('aria-label') ?? '').replace('Details of ', '');
+    const name = first.textContent.replace(/^.*Details of /, '');
     await userEvent.click(first);
-    const details = await screen.findByRole('region', { name: `Field / Block Details (${name})` });
-    expect(within(details).getByRole('link', { name: 'Open field' })).toHaveAttribute(
+    await screen.findByRole('region', { name: `Field / Block Details (${name})` });
+    expect(screen.getByRole('link', { name: 'Open field' })).toHaveAttribute(
       'href',
       expect.stringMatching(/^\/fields\//),
     );

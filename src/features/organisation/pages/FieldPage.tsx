@@ -36,6 +36,7 @@ import {
   useUpdateField,
 } from '../api/hierarchy';
 import { type Field, FIELD_STATUSES, FIELD_TYPES, NODE_CODE } from '../api/schemas';
+import { BoundaryCard } from '../components/BoundaryCard';
 import { LookupSelect } from '../components/LookupSelect';
 import { MoveFieldModal } from '../components/MoveFieldModal';
 import { NodeLifecycle } from '../components/NodeLifecycle';
@@ -577,6 +578,11 @@ function FieldForm({ field }: { readonly field: Field | null }) {
           onRefused={setRefusal}
         />
       ) : null}
+      {field ? (
+        <BoundaryCard field={field} />
+      ) : (
+        <p className="text-sm text-fg-muted">{t('boundary.saveFirst')}</p>
+      )}
       {field ? <AttachmentsPanel owner={{ path: '/fields', id: field.id }} module="field" /> : null}
       <RefusalDialog
         error={refusal}

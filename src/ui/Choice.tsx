@@ -17,7 +17,7 @@ import { Icon } from './Icon';
 
 /** The whole row (box + label) is the target: at least 44 px tall below md. */
 const choiceRow = cx(
-  'group flex cursor-default items-center gap-2 text-base text-fg',
+  'group flex cursor-default items-center gap-2 text-base sm:text-sm text-fg',
   'min-h-(--size-touch-target) md:min-h-0 md:py-1',
   'data-disabled:cursor-not-allowed data-disabled:text-fg-subtle',
 );

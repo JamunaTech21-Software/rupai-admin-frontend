@@ -495,7 +495,7 @@ export function DataTable<TRow>({
                         key={cell.id}
                         {...(index === 0 ? { scope: 'row' } : {})}
                         className={cx(
-                          'border-b border-line px-3 py-2 align-middle font-normal text-fg',
+                          'border-b border-line px-3 py-2 align-middle text-sm font-normal text-fg',
                           column ? ALIGN[alignOf(column)] : 'text-start',
                           column?.isNumeric && 'figures',
                           index === 0 &&

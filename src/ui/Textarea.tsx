@@ -62,7 +62,7 @@ export function Textarea({
         rows={rows}
         {...(placeholder ? { placeholder } : {})}
         className={cx(
-          'w-full rounded-md border border-line-strong bg-surface px-3 py-2 text-base text-fg placeholder:text-fg-subtle',
+          'w-full rounded-md border border-line-strong bg-surface px-3 py-2 text-base text-fg placeholder:text-fg-subtle sm:text-sm',
           'data-hovered:border-fg-muted',
           'data-focused:outline-2 data-focused:outline-offset-1 data-focused:outline-focus',
           'data-invalid:border-danger',

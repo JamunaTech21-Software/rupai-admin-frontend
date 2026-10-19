@@ -68,6 +68,10 @@ export {
 export { FileUpload, type FileUploadProps, type UploadFile } from './FileUpload';
 export { type GeoMapProps, type GeoPoint } from './GeoMap';
 export { LazyGeoMap } from './LazyGeoMap';
+export { type BoundaryEditorProps } from './BoundaryEditor';
+export { type FieldMapProps, type FieldMapText, type MapFeature } from './FieldMap';
+export { MAP_COLOURS } from './mapColours';
+export { LazyBoundaryEditor, LazyFieldMap } from './LazyFieldMap';
 
 // ---- Feedback and overlays (F0.05) ------------------------------------------------------------------------
 export { Drawer, type DrawerProps, Modal, type ModalProps, OverlayTrigger } from './Modal';

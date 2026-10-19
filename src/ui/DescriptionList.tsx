@@ -39,7 +39,7 @@ export function DescriptionList({ items, columns = 1, layout = 'stacked', classN
           )}
         >
           <dt className="text-sm text-fg-muted">{item.term}</dt>
-          <dd className={cx('text-fg', item.isNumeric && 'text-end figures')}>
+          <dd className={cx('text-sm text-fg', item.isNumeric && 'text-end figures')}>
             {isEmpty(item.description) ? (
               <>
                 <span aria-hidden="true">—</span>
