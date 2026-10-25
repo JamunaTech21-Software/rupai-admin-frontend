@@ -198,6 +198,8 @@ export function ProfileForm({ profile, initialType, initialPersonId, onRefused }
   };
   const readOnly = { isReadOnly: !canEdit };
   const [personError, setPersonError] = useState<string | null>(null);
+  /** The person already has an active profile of this kind: the way to it is shown under the person. */
+  const [hasProfile, setHasProfile] = useState(false);
   const estateId = profile?.estate_id ?? bind.estate_id.value;
   const type = profile?.employment_type ?? bind.employment_type.value;
   const colleagues = useEstateProfiles(estateId);
@@ -284,7 +286,13 @@ export function ProfileForm({ profile, initialType, initialPersonId, onRefused }
       if (errorBehaviour(error) === 'field-errors' && isApiError(error)) {
         const duplicate = error.fieldErrors.find((d) => d.field === 'person_id');
         if (duplicate) {
-          setPersonError(duplicate.message);
+          setHasProfile(true);
+          setPersonError(
+            t('form.alreadyHas', {
+              name: person?.label ?? '',
+              type: t(`employmentTypes.${v.employment_type ?? 'worker'}`).toLowerCase(),
+            }),
+          );
           return;
         }
         if (applyServerErrors(form, error.fieldErrors).length === 0) return;
@@ -341,6 +349,7 @@ export function ProfileForm({ profile, initialType, initialPersonId, onRefused }
             onChange={(option) => {
               setPicked(option);
               setPersonError(null);
+              setHasProfile(false);
             }}
             loadOptions={({ query, cursor, signal }) => searchPersons(query, cursor, signal)}
             {...(personError ? { error: personError } : {})}
@@ -348,6 +357,11 @@ export function ProfileForm({ profile, initialType, initialPersonId, onRefused }
         )}
         {isNew && initialPersonId && personError ? (
           <p className="mt-2 text-sm text-danger">{personError}</p>
+        ) : null}
+        {hasProfile && person ? (
+          <p className="mt-2 text-sm">
+            <Link href={`/workforce/persons/${person.id}?tab=employment`}>{t('form.openTheirProfile')}</Link>
+          </p>
         ) : null}
       </Card>
 

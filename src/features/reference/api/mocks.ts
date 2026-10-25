@@ -52,6 +52,10 @@ function seed(): Store {
     skill: [plain('s1', 'PLUCKING', 'Plucking', 10), plain('s2', 'PRUNING', 'Pruning', 20)],
     language: [plain('l1', 'BN', 'Bangla', 10), plain('l2', 'EN', 'English', 20)],
     employee_category: [plain('ec1', 'OFFICER', 'Officer', 10)],
+    trade_category: [
+      plain('tc1', 'LABOUR_SUPPLY', 'Labour supply', 10),
+      plain('tc2', 'CIVIL', 'Civil works', 20),
+    ],
     job_grade: [plain('jg1', 'GRADE_1', 'Grade 1', 10), plain('jg2', 'GRADE_2', 'Grade 2', 20)],
     tea_type: [
       { ...plain('tt1', 'CTC', 'CTC', 10), manufacture_process: 'ctc' },
@@ -407,16 +411,22 @@ export function referenceMocks(b: string): RequestHandler[] {
       if (denied) return denied;
       const wanted = new URL(request.url).searchParams.get('types')?.split(',').filter(Boolean);
       const types = MASTER_TYPES.filter((type) => !wanted || wanted.includes(type.key));
+      // The masters this feature maintains, then the plain lists other screens pick from (religion, skills, job grade …).
+      const own = new Set<string>(MASTER_TYPES.map((type) => type.key));
+      const plain = Object.entries(store)
+        .filter(([key]) => !own.has(key) && (!wanted || wanted.includes(key)))
+        .map(([key, rows]) => [key, rows.filter((row) => row.status === 'active')] as const);
       return ok(
-        Object.fromEntries(
-          types.map((type) => [
+        Object.fromEntries([
+          ...types.map((type) => [
             type.key,
             ordered(
               type,
               store[type.key].filter((row) => row.status === 'active'),
             ),
           ]),
-        ),
+          ...plain,
+        ]),
       );
     }),
     ...MASTER_TYPES.flatMap((type) => typeHandlers(b, type)),

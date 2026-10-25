@@ -17,6 +17,8 @@ import { notificationRoutes, notificationRuleRoutes } from '@/features/notificat
 import { allApprovalRoutes, approvalRoutes, delegationRoutes } from '@/features/approvals';
 import { healthRoutes } from '@/features/health';
 import {
+  contractorCreateRoutes,
+  contractorRoutes,
   personCreateRoutes,
   personRoutes,
   profileCreateRoutes,
@@ -107,6 +109,11 @@ export const routes: RouteObject[] = [
                 children: profileCreateRoutes,
               },
               { element: <RequirePermission permission="employment.view" />, children: profileRoutes },
+              {
+                element: <RequirePermission permission="contractor.create" />,
+                children: contractorCreateRoutes,
+              },
+              { element: <RequirePermission permission="contractor.view" />, children: contractorRoutes },
               { element: <RequirePermission permission="team.create" />, children: teamCreateRoutes },
               { element: <RequirePermission permission="team.view" />, children: teamRoutes },
               { element: <RequirePermission permission="factory.create" />, children: factoryCreateRoutes },

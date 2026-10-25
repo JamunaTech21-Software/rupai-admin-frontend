@@ -141,6 +141,21 @@ describe('profile form', () => {
     expect(await within(table).findByRole('cell', { name: 'Nasima Khatun' })).toBeInTheDocument();
   });
 
+  it('says why a person who already has an active profile cannot be given another', async () => {
+    await openAs('manager', '/workforce/profiles/new?type=worker&person=p2');
+    await screen.findByRole('heading', { level: 1, name: 'Add new worker' });
+    await choose(/Garden/, 'DEMO-A · Rupai Hills Tea Estate');
+    const joined = screen.getByRole('group', { name: /^Join date/ });
+    await userEvent.click(within(joined).getByRole('spinbutton', { name: /month/i }));
+    await userEvent.keyboard('01052025');
+    await userEvent.click(screen.getByRole('button', { name: 'Save profile' }));
+    expect(await screen.findByText(/Salma Begum already has an active worker profile/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open their employment' })).toHaveAttribute(
+      'href',
+      '/workforce/persons/p2?tab=employment',
+    );
+  });
+
   it('saves a change and returns to the list', async () => {
     const router = await openAs('manager', '/workforce/profiles/pr2');
     await screen.findByRole('heading', { level: 1, name: 'Salma Begum' });
