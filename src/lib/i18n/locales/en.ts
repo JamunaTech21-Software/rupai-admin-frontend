@@ -2654,6 +2654,14 @@ export const en = {
       confirm: 'Import',
       started: 'Saving started',
     },
+    salary: {
+      noteTitle: 'Salary lines in this file',
+      note: 'A file that sets salaries is approved by whoever commits it. It must be committed by a person with approval rights who did not upload it.',
+      sendTitle: 'Send to an approver to commit',
+      self: 'This file sets salaries, and committing it approves them, so you cannot commit a file you uploaded. Ask another person who may approve employment to open this import and commit it.',
+      permission:
+        'This file sets salaries, and committing it approves them. You need the right to approve employment; ask someone who has it to commit this import.',
+    },
     cancel: {
       button: 'Cancel import',
       title: 'Cancel the import of {{file}}?',

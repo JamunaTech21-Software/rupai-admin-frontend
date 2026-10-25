@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router';
 
 import { NotFoundState, PageError, PageLoading, RefusalDialog } from '@/features/system';
-import { errorBehaviour } from '@/lib/errors';
+import { errorBehaviour, isApiError } from '@/lib/errors';
 import { useFormat, useTranslation } from '@/lib/i18n';
 import {
   Alert,
@@ -141,6 +141,8 @@ export function ImportBatchPage() {
   const cancel = useCancelImport({ id: id ?? '' });
   const [confirming, setConfirming] = useState<'commit' | 'cancel' | null>(null);
   const [refusal, setRefusal] = useState<unknown>(null);
+  /** Committing a file that sets salaries was refused: it needs another person who may approve them. */
+  const [approver, setApprover] = useState<'self' | 'permission' | null>(null);
 
   if (id === undefined) return <NotFoundState />;
   if (query.isPending) return <PageLoading />;
@@ -159,7 +161,14 @@ export function ImportBatchPage() {
         toast.success(t('cancel.done'));
       }
     } catch (error) {
-      if (errorBehaviour(error) !== 'conflict') setRefusal(error);
+      if (isApiError(error) && error.code === 'SELF_APPROVAL_FORBIDDEN') setApprover('self');
+      else if (
+        isApiError(error) &&
+        error.code === 'PERMISSION_DENIED' &&
+        error.details.some((detail) => detail.context?.permission === 'employment.approve')
+      )
+        setApprover('permission');
+      else if (errorBehaviour(error) !== 'conflict') setRefusal(error);
     }
     setConfirming(null);
   }
@@ -229,6 +238,15 @@ export function ImportBatchPage() {
         </Card>
       ) : null}
 
+      {approver ? (
+        <Alert tone="warning" title={t('salary.sendTitle')}>
+          {t(approver === 'self' ? 'salary.self' : 'salary.permission')}
+        </Alert>
+      ) : batch.import_type === 'workforce.employee' && batch.state === 'validated' ? (
+        <Alert tone="info" title={t('salary.noteTitle')}>
+          {t('salary.note')}
+        </Alert>
+      ) : null}
       {batch.state === 'validated' && !batch.can_commit ? (
         <Alert tone="warning" title={t('validated.nothingTitle')}>
           {t('validated.nothingBody')}

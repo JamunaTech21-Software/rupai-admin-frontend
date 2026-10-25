@@ -1,3 +1,4 @@
+import { ImportButton } from '@/features/imports';
 import { ScopeNotice, useAllEstates } from '@/features/organisation';
 import { usePermission } from '@/lib/auth';
 import { useFormat, useTranslation } from '@/lib/i18n';
@@ -147,7 +148,16 @@ export function ContractorsPage() {
 
   return (
     <Stack gap={6}>
-      <PageHeader title={t('contractors.title')} description={t('contractors.description')} actions={add} />
+      <PageHeader
+        title={t('contractors.title')}
+        description={t('contractors.description')}
+        actions={
+          <span className="flex flex-wrap items-center gap-2">
+            <ImportButton type="workforce.contractor" />
+            {add}
+          </span>
+        }
+      />
       <ScopeNotice scope={list.appliedScope} />
       <ContractorCards summary={summary.data} />
       <DataTable
