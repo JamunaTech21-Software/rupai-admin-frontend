@@ -149,6 +149,34 @@ describe('person form', () => {
   });
 });
 
+describe('employment on the person page', () => {
+  it('shows the current employment of a person who has one', async () => {
+    await openAs('manager', '/workforce/persons/p2');
+    await screen.findByRole('heading', { level: 1, name: 'Salma Begum' });
+    const card = (await screen.findByRole('heading', { level: 2, name: 'Employment information' })).closest(
+      'section',
+    );
+    if (!card) throw new Error('no card');
+    expect(await within(card).findByRole('link', { name: 'WRK-A-0001' })).toBeInTheDocument();
+    expect(within(card).getByText('Seasonal')).toBeInTheDocument();
+    expect(within(card).getByText('North 1')).toBeInTheDocument();
+    expect(within(card).getByRole('link', { name: 'Open the profile' })).toHaveAttribute(
+      'href',
+      '/workforce/profiles/pr2',
+    );
+  });
+
+  it('offers to open an employment profile for a person who has none', async () => {
+    await openAs('manager', '/workforce/persons/p_ref');
+    await screen.findByRole('heading', { level: 1, name: 'Nasima Khatun' });
+    expect(await screen.findByText('This person has no employment profile yet.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Add employment profile' })).toHaveAttribute(
+      'href',
+      '/workforce/profiles/new?person=p_ref',
+    );
+  });
+});
+
 describe('family members and life cycle', () => {
   it('lists, adds and removes a family member', async () => {
     await openAs('manager', '/workforce/persons/p1');

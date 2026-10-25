@@ -2863,6 +2863,11 @@ export const en = {
       serviceLater:
         'The service summary (profiles, transfers, promotions) appears here with P2.02 and P2.03.',
       biometric: 'Photo & biometric',
+      employmentAfterSave: 'Save the person first, then open their employment profile (worker or employee).',
+      employmentNone: 'This person has no employment profile yet.',
+      employmentAdd: 'Add employment profile',
+      employmentOpen: 'Open the profile',
+      employmentCurrent: 'Current employment',
       biometricLater:
         'Add the photograph as a document. Face and thumb capture for attendance are available in Phase 5.',
       createdBy: 'Created by',
@@ -3100,6 +3105,9 @@ export const en = {
       mobile: 'Mobile',
       personPlaceholder: 'Search by name, ID or mobile',
       noPerson: 'No active person found. Register them under Persons first.',
+      alreadyHas:
+        '{{name}} already has an active {{type}} profile. A person can have one at a time: open it, or separate it first.',
+      openTheirProfile: 'Open their employment',
       estate: 'Garden / unit',
       employmentType: 'Type',
       profileNumber: { worker: 'Worker ID', employee: 'Employee ID', any: 'Profile ID' },

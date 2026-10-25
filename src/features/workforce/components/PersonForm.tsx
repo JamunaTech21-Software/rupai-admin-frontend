@@ -21,6 +21,7 @@ import {
   RELATIONS,
   TITLES,
 } from '../api/schemas';
+import { EmploymentSummaryCard } from './EmploymentSummaryCard';
 import { LookupMultiSelect, LookupPick } from './LookupPick';
 
 const NONE = 'none';
@@ -594,7 +595,6 @@ export function PersonForm({ person, onRefused }: PersonFormProps) {
             isDisabled={!canEdit}
             {...(bind.experience_years.error ? { error: bind.experience_years.error } : {})}
           />
-          <span className="hidden xl:block" />
           <LookupMultiSelect
             type="skill"
             label={t('person.skills')}
@@ -611,7 +611,6 @@ export function PersonForm({ person, onRefused }: PersonFormProps) {
             onChange={bind.language_ids.onChange}
             isDisabled={!canEdit}
           />
-          <span className="hidden xl:block" />
           <Input
             label={t('person.emergencyName')}
             placeholder={t('person.placeholders.emergencyName')}
@@ -643,7 +642,7 @@ export function PersonForm({ person, onRefused }: PersonFormProps) {
             label={t('person.emergencyAddress')}
             placeholder={t('person.placeholders.address')}
             rows={2}
-            className="sm:col-span-1 xl:col-span-2"
+            className="sm:col-span-2 xl:col-span-1"
             {...bind.emergency_contact_address}
             {...readOnly}
           />
@@ -708,16 +707,20 @@ export function PersonForm({ person, onRefused }: PersonFormProps) {
             placeholder={t('person.placeholders.remarks')}
             rows={2}
             maxLength={500}
-            className="sm:col-span-2 xl:col-span-3"
+            className="sm:col-span-2 xl:col-span-2"
             {...bind.remarks}
             {...readOnly}
           />
         </div>
       </Card>
 
-      <Card title={t('person.sections.employment')} headingLevel={2}>
-        <p className="text-sm text-fg-muted">{t('person.employmentLater')}</p>
-      </Card>
+      {person ? (
+        <EmploymentSummaryCard personId={person.id} />
+      ) : (
+        <Card title={t('person.sections.employment')} headingLevel={2}>
+          <p className="text-sm text-fg-muted">{t('person.employmentAfterSave')}</p>
+        </Card>
+      )}
 
       {canEdit ? (
         <div className="flex justify-end gap-3">
