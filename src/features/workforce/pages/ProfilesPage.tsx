@@ -1,3 +1,4 @@
+import { ImportButton } from '@/features/imports';
 import { ScopeNotice, useAllEstates, useEstateSections } from '@/features/organisation';
 import { usePermission } from '@/lib/auth';
 import { useFormat, useTranslation } from '@/lib/i18n';
@@ -179,7 +180,12 @@ export function ProfilesPage({ type }: { readonly type?: EmploymentType }) {
       <PageHeader
         title={t(`profiles.title.${type ?? 'any'}`)}
         description={t(`profiles.description.${type ?? 'any'}`)}
-        actions={add}
+        actions={
+          <span className="flex flex-wrap items-center gap-2">
+            {type ? <ImportButton type={`workforce.${type}`} /> : null}
+            {add}
+          </span>
+        }
       />
       <ScopeNotice scope={list.appliedScope} />
       <SummaryCards summary={summary.data} noun={noun} />

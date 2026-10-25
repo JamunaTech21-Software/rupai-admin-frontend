@@ -28,6 +28,36 @@ const TYPES = [
     ],
   },
   {
+    key: 'workforce.worker',
+    label: 'Workers',
+    permission: 'person',
+    max_rows: 2000,
+    columns: [
+      { name: 'estate', required: true, description: 'The estate code', example: 'DEMO-A' },
+      { name: 'first_name', required: true, description: 'First name', example: 'Karim' },
+    ],
+  },
+  {
+    key: 'workforce.employee',
+    label: 'Employees',
+    permission: 'person',
+    max_rows: 2000,
+    columns: [
+      { name: 'estate', required: true, description: 'The estate code', example: 'DEMO-A' },
+      { name: 'first_name', required: true, description: 'First name', example: 'Karim' },
+      { name: 'basic_salary', required: false, description: 'A number, e.g. 15000.00', example: '15000.00' },
+    ],
+  },
+  {
+    key: 'workforce.contractor',
+    label: 'Contractors',
+    permission: 'contractor',
+    max_rows: 500,
+    columns: [
+      { name: 'name', required: true, description: 'The contractor name', example: 'M/S Green Leaf' },
+    ],
+  },
+  {
     key: 'lookup.soil_type',
     label: 'Soil types',
     permission: 'lookup',
@@ -257,6 +287,15 @@ export function importMocks(base = '/api/v1'): RequestHandler[] {
       if (!entry) return notFound();
       const b = entry.batch;
       if (!b.can_commit) return apiError(409, 'INVALID_TRANSITION', 'This import cannot be committed now.');
+      // Committing an employee file approves its salaries: not by the person who uploaded it (P7 §9.6).
+      if (b.import_type === 'workforce.employee')
+        return apiError(403, 'SELF_APPROVAL_FORBIDDEN', 'Another person commits this file.', [
+          {
+            code: 'SELF_APPROVAL_FORBIDDEN',
+            message:
+              'Committing approves the salary lines: another person with employment.approve commits this file.',
+          },
+        ]);
       b.state = 'committing';
       b.committed_count = b.valid_count;
       b.can_commit = false;
