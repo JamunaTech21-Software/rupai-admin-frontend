@@ -365,6 +365,7 @@ function EstateProfile({
         }
       }
       toast.success(t('profile.saved'));
+      void navigate('/estates');
     } catch (error) {
       if (errorBehaviour(error) === 'conflict') return;
       if (errorBehaviour(error) === 'field-errors' && isApiError(error)) {

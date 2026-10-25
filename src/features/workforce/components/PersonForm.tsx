@@ -330,6 +330,7 @@ export function PersonForm({ person, onRefused }: PersonFormProps) {
       } else {
         await update.mutateAsync(input);
         toast.success(t('person.saved'));
+        void navigate('/workforce/persons');
       }
     } catch (error) {
       if (errorBehaviour(error) === 'conflict') return;

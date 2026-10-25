@@ -180,8 +180,8 @@ describe('field / block', () => {
     expect(screen.getByText('Enter degrees from 0 to 90, with at most two decimals.')).toBeInTheDocument();
   }, 60_000);
 
-  it('puts a block inside another field of the estate', async () => {
-    await openAs('manager', '/fields/f1');
+  it('puts a block inside another field of the estate and returns to the list', async () => {
+    const router = await openAs('manager', '/fields/f1');
     await screen.findByRole('heading', { level: 1, name: 'A-N1-1' });
     await userEvent.click(await screen.findByRole('button', { name: /Parent field/ }));
     // Its own estate's other fields, never itself.
@@ -190,8 +190,11 @@ describe('field / block', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(await screen.findByText('Field saved')).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Parent field/ })).toHaveTextContent('A-N1-2');
+      expect(router.state.location.pathname).toBe('/fields');
     });
+    // The saved parent is there when the field is opened again.
+    await router.navigate('/fields/f1');
+    expect(await screen.findByRole('button', { name: /Parent field/ })).toHaveTextContent('A-N1-2');
   }, 60_000);
 });
 
