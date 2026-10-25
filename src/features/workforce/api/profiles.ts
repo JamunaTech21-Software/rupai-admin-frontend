@@ -229,3 +229,26 @@ export function useDeleteProfile(profile: Pick<Profile, 'id'>) {
     invalidates: () => [profileKeys.lists()],
   });
 }
+
+/** One estate's worker profiles that are not separated, to choose team members from. */
+export function useEstateWorkers(estateId: string | null) {
+  return useQuery({
+    ...cachePolicy('master'),
+    queryKey: profileKeys.list(`workers:${estateId ?? ''}`),
+    enabled: estateId !== null && estateId !== '',
+    queryFn: async ({ signal }) =>
+      (
+        await api.get('/employment-profiles', {
+          query: {
+            'filter[estate_id]': estateId ?? '',
+            'filter[employment_type]': 'worker',
+            'filter[status][in]': 'active,suspended,on_leave',
+            per_page: 200,
+            sort: 'profile_number',
+          },
+          schema: z.array(ProfileSchema),
+          signal,
+        })
+      ).data,
+  });
+}

@@ -28,6 +28,14 @@ export const profileRoutes: RouteObject[] = [
 export const profileCreateRoutes: RouteObject[] = [
   { path: 'workforce/profiles/new', lazy: () => import('./pages/ProfilePage') },
 ];
+/** Worker teams (P2.04). */
+export const teamRoutes: RouteObject[] = [
+  { path: 'workforce/teams', lazy: () => import('./pages/TeamsPage') },
+  { path: 'workforce/teams/:id', lazy: () => import('./pages/TeamPage') },
+];
+export const teamCreateRoutes: RouteObject[] = [
+  { path: 'workforce/teams/new', lazy: () => import('./pages/TeamPage') },
+];
 export const personCreateRoutes: RouteObject[] = [
   { path: 'workforce/persons/new', lazy: () => import('./pages/PersonPage') },
 ];
