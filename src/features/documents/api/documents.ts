@@ -21,6 +21,7 @@ export const DOCUMENT_OWNERS = [
   { type: 'warehouse', path: '/warehouses', module: 'warehouse' },
   { type: 'party', path: '/parties', module: 'land' },
   { type: 'person', path: '/persons', module: 'person' },
+  { type: 'contractor', path: '/contractors', module: 'contractor' },
 ] as const;
 export type DocumentOwnerType = (typeof DOCUMENT_OWNERS)[number]['type'];
 

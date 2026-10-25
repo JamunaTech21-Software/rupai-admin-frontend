@@ -47,6 +47,7 @@ export const LOOKUP_TYPES = [
   'skill',
   'language',
   'job_grade',
+  'trade_category',
   'uom',
   'currency',
   'country',

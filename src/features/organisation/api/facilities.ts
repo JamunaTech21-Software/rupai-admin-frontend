@@ -163,7 +163,7 @@ export function useUpdateParty(party: Party) {
 
 /** The owner of a contacts list, as its API path: `warehouses/3`. Later owners (buyers, brokers) reuse this. */
 export interface ContactOwner {
-  readonly path: 'warehouses' | 'parties';
+  readonly path: 'warehouses' | 'parties' | 'contractors';
   readonly id: string;
 }
 

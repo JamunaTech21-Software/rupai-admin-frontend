@@ -3,6 +3,7 @@ import { type RouteObject } from 'react-router';
 /** The estates a user may pick from (other features offer them as a "garden / unit" choice). */
 export { useAllEstates, useDivisions, useEstateSections } from './api/hierarchy';
 export { ScopeNotice } from './components/ScopeNotice';
+export { ContactsPanel } from './components/ContactsPanel';
 
 /**
  * Published API of the organisation feature (P1.07): organisation settings, estates with their divisions and

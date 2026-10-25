@@ -36,6 +36,14 @@ export const teamRoutes: RouteObject[] = [
 export const teamCreateRoutes: RouteObject[] = [
   { path: 'workforce/teams/new', lazy: () => import('./pages/TeamPage') },
 ];
+/** Contractors, their contracts and labour (P2.05). */
+export const contractorRoutes: RouteObject[] = [
+  { path: 'workforce/contractors', lazy: () => import('./pages/ContractorsPage') },
+  { path: 'workforce/contractors/:id', lazy: () => import('./pages/ContractorPage') },
+];
+export const contractorCreateRoutes: RouteObject[] = [
+  { path: 'workforce/contractors/new', lazy: () => import('./pages/ContractorPage') },
+];
 export const personCreateRoutes: RouteObject[] = [
   { path: 'workforce/persons/new', lazy: () => import('./pages/PersonPage') },
 ];
