@@ -326,7 +326,7 @@ export function PersonForm({ person, onRefused }: PersonFormProps) {
       if (isNew) {
         const made = await create.mutateAsync(input);
         toast.success(t('person.created', { name: made.full_name }));
-        void navigate(`/workforce/persons/${made.id}`, { replace: true });
+        void navigate('/workforce/persons');
       } else {
         await update.mutateAsync(input);
         toast.success(t('person.saved'));

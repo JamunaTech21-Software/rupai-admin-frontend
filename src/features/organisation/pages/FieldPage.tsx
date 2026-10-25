@@ -314,7 +314,7 @@ function FieldForm({ field }: { readonly field: Field | null }) {
           ...(values.section_effective_from ? { section_effective_from: values.section_effective_from } : {}),
         });
         toast.success(t('field.created', { number: created.field_number }));
-        void navigate(`/fields/${created.id}`, { replace: true });
+        void navigate('/fields');
       } else {
         await update.mutateAsync(input);
         toast.success(t('field.saved'));

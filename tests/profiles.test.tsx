@@ -107,7 +107,23 @@ describe('workers and employees', () => {
 });
 
 describe('profile form', () => {
-  it('opens a profile for the person it was opened from, and refuses a second active one', async () => {
+  it('picks the person on the first click and keeps the choice', async () => {
+    await openAs('manager', '/workforce/profiles/new?type=worker');
+    await screen.findByRole('heading', { level: 1, name: 'Add new worker' });
+    const person = await screen.findByRole('combobox', { name: /Person/ });
+    await userEvent.click(person);
+    await userEvent.type(person, 'Sal');
+    await userEvent.click(await screen.findByRole('option', { name: /Salma Begum/ }, { timeout: 4000 }));
+    // The list reloads for the chosen name; the choice must survive it.
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    expect(screen.getByRole('combobox', { name: /Person/ })).toHaveValue('Salma Begum');
+    // And it is what is saved: the form asks for the rest, not for the person.
+    await userEvent.click(screen.getByRole('button', { name: 'Save profile' }));
+    expect(await screen.findByText('Choose the garden / unit.')).toBeInTheDocument();
+    expect(screen.queryByText('Choose the person.')).not.toBeInTheDocument();
+  });
+
+  it('opens a profile for the person it was opened from and returns to the list', async () => {
     const router = await openAs('manager', '/workforce/profiles/new?type=worker&person=p_ref');
     await screen.findByRole('heading', { level: 1, name: 'Add new worker' });
     expect(await screen.findByText('Nasima Khatun')).toBeInTheDocument();
@@ -119,9 +135,10 @@ describe('profile form', () => {
     await userEvent.keyboard('01052025');
     await userEvent.click(screen.getByRole('button', { name: 'Save profile' }));
     await waitFor(() => {
-      expect(router.state.location.pathname).toMatch(/^\/workforce\/profiles\/pr\d+$/);
+      expect(router.state.location.pathname).toBe('/workforce/workers');
     });
-    expect(await screen.findByRole('heading', { level: 1, name: 'Nasima Khatun' })).toBeInTheDocument();
+    const table = await screen.findByRole('table', { name: 'Worker management' });
+    expect(await within(table).findByRole('cell', { name: 'Nasima Khatun' })).toBeInTheDocument();
   });
 
   it('saves a change and returns to the list', async () => {

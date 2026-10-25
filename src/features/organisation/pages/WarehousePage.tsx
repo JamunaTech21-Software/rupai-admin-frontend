@@ -102,7 +102,7 @@ function WarehouseEditor({ warehouse }: { readonly warehouse: Warehouse | null }
       } else {
         const created = await create.mutateAsync(input);
         toast.success(t('warehouse.created', { name: created.name }));
-        void navigate(`/warehouses/${created.id}`, { replace: true });
+        void navigate('/warehouses');
       }
     } catch (error) {
       if (errorBehaviour(error) === 'conflict') return;

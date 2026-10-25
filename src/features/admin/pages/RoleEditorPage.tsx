@@ -171,7 +171,7 @@ function RoleForm({
       if (isNew) {
         const created = await create.mutateAsync(input);
         toast.success(t('role.created', { name: created.name }));
-        void navigate(`/admin/roles/${created.id}`, { replace: true });
+        void navigate('/admin/roles');
       } else {
         await update.mutateAsync(input);
         toast.success(t('role.saved'));

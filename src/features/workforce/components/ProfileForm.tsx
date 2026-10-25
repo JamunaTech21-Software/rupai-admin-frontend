@@ -273,7 +273,7 @@ export function ProfileForm({ profile, initialType, initialPersonId, onRefused }
         };
         const made = await create.mutateAsync(input);
         toast.success(t('form.created', { name: made.person.full_name }));
-        void navigate(`/workforce/profiles/${made.id}`, { replace: true });
+        void navigate(made.employment_type === 'worker' ? '/workforce/workers' : '/workforce/employees');
       } else {
         await update.mutateAsync({ ...common, profile_number: v.profile_number.trim() });
         toast.success(t('form.saved'));

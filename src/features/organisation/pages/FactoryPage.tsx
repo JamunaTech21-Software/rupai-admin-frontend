@@ -98,7 +98,7 @@ function FactoryEditor({ factory }: { readonly factory: Factory | null }) {
       } else {
         const created = await create.mutateAsync(input);
         toast.success(t('factory.created', { name: created.name }));
-        void navigate(`/factories/${created.id}`, { replace: true });
+        void navigate('/factories');
       }
     } catch (error) {
       if (errorBehaviour(error) === 'conflict') return;

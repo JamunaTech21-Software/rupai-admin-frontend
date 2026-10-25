@@ -131,7 +131,7 @@ function SeasonEditor({ season }: { readonly season: Season | null }) {
       } else {
         const created = await create.mutateAsync({ ...input, estate_id: values.estate_id });
         toast.success(t('season.created', { name: created.name }));
-        void navigate(`/seasons/${created.id}`, { replace: true });
+        void navigate('/seasons');
       }
     } catch (error) {
       if (errorBehaviour(error) === 'conflict') return;

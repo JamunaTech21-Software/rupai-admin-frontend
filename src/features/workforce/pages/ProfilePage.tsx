@@ -12,6 +12,7 @@ import { EMPLOYMENT_TYPES, type Profile } from '../api/profileSchemas';
 import { AssignmentsPanel } from '../components/AssignmentsPanel';
 import { ProfileActions } from '../components/ProfileActions';
 import { ProfileForm } from '../components/ProfileForm';
+import { TeamsOfWorker } from '../components/TeamsOfWorker';
 
 /** Workforce → a profile (or a new one): pick the person, set the employment; separate, suspend or delete it. */
 export function ProfilePage() {
@@ -111,6 +112,15 @@ function ProfileDetail({ profile }: { readonly profile: Profile }) {
             label: t('form.tabs.assignments'),
             content: <AssignmentsPanel profile={profile} onRefused={setRefusal} />,
           },
+          ...(profile.employment_type === 'worker'
+            ? [
+                {
+                  id: 'teams',
+                  label: t('form.tabs.teams'),
+                  content: <TeamsOfWorker profileId={profile.id} />,
+                },
+              ]
+            : []),
         ]}
       />
       <RefusalDialog

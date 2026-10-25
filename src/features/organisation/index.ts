@@ -1,7 +1,7 @@
 import { type RouteObject } from 'react-router';
 
 /** The estates a user may pick from (other features offer them as a "garden / unit" choice). */
-export { useAllEstates, useEstateSections } from './api/hierarchy';
+export { useAllEstates, useDivisions, useEstateSections } from './api/hierarchy';
 export { ScopeNotice } from './components/ScopeNotice';
 
 /**

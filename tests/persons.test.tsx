@@ -104,15 +104,16 @@ describe('person form', () => {
     expect(await screen.findByText('Another person has this national ID.')).toBeInTheDocument();
   });
 
-  it('registers a person and opens their page', async () => {
+  it('registers a person and returns to the list', async () => {
     const router = await openAs('manager', '/workforce/persons/new');
     await userEvent.type(await screen.findByRole('textbox', { name: /First name/ }), 'Karim');
     await userEvent.type(screen.getByRole('textbox', { name: /^Last name/ }), 'Ali');
     await userEvent.click(screen.getByRole('button', { name: 'Save person' }));
     await waitFor(() => {
-      expect(router.state.location.pathname).toMatch(/^\/workforce\/persons\/p\d+$/);
+      expect(router.state.location.pathname).toBe('/workforce/persons');
     });
-    expect(await screen.findByRole('heading', { level: 1, name: 'Karim Ali' })).toBeInTheDocument();
+    const table = await screen.findByRole('table', { name: 'Persons' });
+    expect(await within(table).findByText('Karim Ali')).toBeInTheDocument();
   });
 
   it('opens a person with their details, saves a change and returns to the list', async () => {

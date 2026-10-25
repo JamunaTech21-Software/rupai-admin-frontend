@@ -339,7 +339,7 @@ function EstateProfile({
       if (isNew) {
         const created = await create.mutateAsync(input);
         toast.success(t('estate.created', { name: created.name }));
-        void navigate(`/estates/${created.id}`, { replace: true });
+        void navigate('/estates');
         return;
       }
       await update.mutateAsync(input);

@@ -85,14 +85,18 @@ describe('estates', () => {
     expect(await screen.findByText('Showing: Rupai Hills Tea Estate')).toBeInTheDocument();
   });
 
-  it('creates an estate and opens it', async () => {
+  it('creates an estate and returns to the list', async () => {
     const router = await openAs('manager', '/estates/new');
     await screen.findByRole('heading', { level: 1, name: 'Add estate' });
     await userEvent.type(screen.getByRole('textbox', { name: /^Code/ }), 'DEMO-C');
     await userEvent.type(screen.getByRole('textbox', { name: /^Name/ }), 'Surma Tea Estate');
     await userEvent.click(screen.getByRole('button', { name: 'Create estate' }));
-    await screen.findByRole('heading', { level: 1, name: 'Surma Tea Estate' }, { timeout: 15_000 });
-    expect(router.state.location.pathname).toMatch(/^\/estates\/e_new_/);
+    await waitFor(
+      () => {
+        expect(router.state.location.pathname).toBe('/estates');
+      },
+      { timeout: 15_000 },
+    );
   });
 
   it('a duplicate code is shown on the field', async () => {
@@ -250,8 +254,9 @@ describe('fields', () => {
     await userEvent.clear(planted);
     await userEvent.type(planted, '4.5');
     await userEvent.click(screen.getByRole('button', { name: 'Create field' }));
-    await screen.findByRole('heading', { level: 1, name: 'A-S1-1' });
-    expect(router.state.location.pathname).toMatch(/^\/fields\/f_new_/);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/fields');
+    });
   });
 
   it('moves a field to another section from a date', async () => {
