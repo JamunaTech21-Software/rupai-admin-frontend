@@ -49,7 +49,7 @@ export function UserCreatePage() {
         initial_password: values.initial_password,
       });
       toast.success(t('user.created', { username: user.username }), t('user.createdHint'));
-      void navigate(`/admin/users/${user.id}?tab=roles`);
+      void navigate('/admin/users');
     } catch (error) {
       if (errorBehaviour(error) === 'field-errors' && isApiError(error)) {
         const rest = applyServerErrors(form, error.fieldErrors);

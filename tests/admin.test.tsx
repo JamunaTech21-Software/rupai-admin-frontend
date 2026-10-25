@@ -58,9 +58,13 @@ describe('users', () => {
     await userEvent.type(screen.getByLabelText(/^Confirm/), 'Long-Enough-Pass-1');
     await userEvent.click(screen.getByRole('button', { name: 'Create user' }));
 
+    // Saving a new user returns to the list; their roles are given from their page.
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/admin/users');
+    });
+    await userEvent.click(await screen.findByRole('link', { name: 'karim' }));
     await screen.findByRole('heading', { level: 1, name: 'karim' });
-    expect(router.state.location.pathname).toMatch(/^\/admin\/users\/usr_new_/);
-    expect(router.state.location.search).toBe('?tab=roles');
+    await userEvent.click(screen.getByRole('tab', { name: /^Roles/ }));
 
     await userEvent.click(screen.getByRole('button', { name: 'Change roles' }));
     const dialog = await screen.findByRole('dialog');
@@ -126,8 +130,9 @@ describe('roles', () => {
     expect(within(matrix).getByText('2 of 25 selected')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Create role' }));
-    await screen.findByRole('heading', { level: 1, name: 'Auditor' });
-    expect(router.state.location.pathname).toMatch(/^\/admin\/roles\/rol_new_/);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/admin/roles');
+    });
   });
 
   it('rejects a malformed code before sending', async () => {

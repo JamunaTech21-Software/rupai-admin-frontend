@@ -118,7 +118,7 @@ export function TeamForm({
       if (team === null) {
         const made = await create.mutateAsync({ ...input, estate_id: v.estate_id ?? '' });
         toast.success(t('team.created', { name: made.name }));
-        void navigate(`/workforce/teams/${made.id}`, { replace: true });
+        void navigate('/workforce/teams');
       } else {
         await update.mutateAsync(input);
         toast.success(t('team.saved'));

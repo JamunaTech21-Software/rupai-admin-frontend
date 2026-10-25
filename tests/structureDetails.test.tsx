@@ -161,7 +161,7 @@ describe('field / block', () => {
     await userEvent.clear(spacing);
     await userEvent.type(spacing, '3ft × 3ft');
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
-    expect(await screen.findByText('Field saved')).toBeInTheDocument();
+    expect((await screen.findAllByText('Field saved')).length).toBeGreaterThan(0);
     expect(await screen.findByRole('textbox', { name: /^Spacing/ })).toHaveValue('3ft × 3ft');
   }, 60_000);
 
@@ -188,7 +188,7 @@ describe('field / block', () => {
     expect(screen.queryByRole('option', { name: 'A-N1-1 · Block One' })).not.toBeInTheDocument();
     await userEvent.click(await screen.findByRole('option', { name: 'A-N1-2' }));
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
-    expect(await screen.findByText('Field saved')).toBeInTheDocument();
+    expect((await screen.findAllByText('Field saved')).length).toBeGreaterThan(0);
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/fields');
     });

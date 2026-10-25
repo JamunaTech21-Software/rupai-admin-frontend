@@ -98,17 +98,27 @@ export function AsyncCombobox({
   });
 
   const isSearching = list.loadingState === 'loading' || list.loadingState === 'filtering';
+  // Choosing an option puts its name in the box, which starts a new search for that name. The chosen option must
+  // stay in the list while it loads, or the box takes the choice back (and the second click was the one that held).
+  const chosen = value ?? null;
+  const items =
+    chosen !== null && !list.items.some((item) => item.id === chosen.id)
+      ? [chosen, ...list.items]
+      : list.items;
 
   return (
     <ComboBox
-      items={list.items}
+      items={items}
       inputValue={list.filterText}
       onInputChange={(text) => {
         list.setFilterText(text);
       }}
       value={value?.id ?? null}
       onChange={(key) => {
-        const option = list.items.find((item) => item.id === key) ?? null;
+        const option = items.find((item) => item.id === key) ?? null;
+        // The box is controlled, so the chosen name goes into it here: otherwise it keeps what was typed ("Sal") and
+        // the choice looks unmade until it is clicked again.
+        if (option) list.setFilterText(option.label);
         onChange?.(option);
       }}
       {...(onBlur ? { onBlur } : {})}
@@ -147,7 +157,7 @@ export function AsyncCombobox({
             </p>
           )}
         >
-          <Collection items={list.items}>
+          <Collection items={items}>
             {(option) => (
               <ListBoxItem id={option.id} textValue={option.label} className={listItem}>
                 {({ isSelected }) => (

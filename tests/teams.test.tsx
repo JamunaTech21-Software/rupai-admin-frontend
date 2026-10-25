@@ -78,7 +78,7 @@ describe('teams list', () => {
 });
 
 describe('team form', () => {
-  it('adds a team and opens its page; a duplicate code is shown on the field', async () => {
+  it('adds a team and returns to the list; a duplicate code is shown on the field', async () => {
     const router = await openAs('manager', '/workforce/teams/new');
     await screen.findByRole('heading', { level: 1, name: 'Add team' });
     await userEvent.click(screen.getByRole('button', { name: 'Save team' }));
@@ -94,9 +94,10 @@ describe('team form', () => {
     await userEvent.type(code, 'NEW-1');
     await userEvent.click(screen.getByRole('button', { name: 'Save team' }));
     await waitFor(() => {
-      expect(router.state.location.pathname).toMatch(/^\/workforce\/teams\/t\d+$/);
+      expect(router.state.location.pathname).toBe('/workforce/teams');
     });
-    expect(await screen.findByRole('heading', { level: 1, name: 'Duplicate' })).toBeInTheDocument();
+    const table = await screen.findByRole('table', { name: 'Teams' });
+    expect(await within(table).findByRole('link', { name: 'NEW-1' })).toBeInTheDocument();
   });
 
   it('saves a change and returns to the list', async () => {

@@ -102,7 +102,7 @@ function PartyEditor({ party }: { readonly party: Party | null }) {
       } else {
         const created = await create.mutateAsync(input);
         toast.success(t('party.created', { name: created.name }));
-        void navigate(`/parties/${created.id}`, { replace: true });
+        void navigate('/parties');
       }
     } catch (error) {
       if (errorBehaviour(error) === 'conflict') return;

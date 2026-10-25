@@ -53,11 +53,7 @@ describe('factories', () => {
     await userEvent.type(screen.getByRole('textbox', { name: /^Code/ }), 'DEMO-F3');
     await userEvent.type(screen.getByRole('textbox', { name: /^Name/ }), 'No Licence Factory');
     await userEvent.click(screen.getByRole('button', { name: 'Create factory' }));
-    await screen.findByRole('heading', { level: 1, name: 'No Licence Factory' });
-
-    await userEvent.click(
-      within(await openSidebarGroup('Estate Management')).getByRole('link', { name: 'Factories' }),
-    );
+    // Saving a new factory returns to the list.
     const table = await screen.findByRole('table', { name: 'Factories' });
     const central = (await within(table).findByRole('link', { name: 'Rupai Central Factory' })).closest('tr');
     const noLicence = within(table).getByRole('link', { name: 'No Licence Factory' }).closest('tr');
@@ -85,8 +81,9 @@ describe('factories', () => {
     await userEvent.click(screen.getByRole('button', { name: /None.*Main estate|Main estate/ }));
     await userEvent.click(await screen.findByRole('option', { name: 'DEMO-B · Jamuna Valley Tea Estate' }));
     await userEvent.click(screen.getByRole('button', { name: 'Create factory' }));
-    await screen.findByRole('heading', { level: 1, name: 'Valley Factory' });
-    expect(router.state.location.pathname).toMatch(/^\/factories\/fa_new_/);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/factories');
+    });
   });
 
   it('needs factory.view', async () => {
