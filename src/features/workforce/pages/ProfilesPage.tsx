@@ -1,4 +1,4 @@
-import { ScopeNotice, useAllEstates } from '@/features/organisation';
+import { ScopeNotice, useAllEstates, useEstateSections } from '@/features/organisation';
 import { usePermission } from '@/lib/auth';
 import { useFormat, useTranslation } from '@/lib/i18n';
 import { type LookupType, lookupText, useActiveLookups } from '@/lib/lookups';
@@ -34,6 +34,9 @@ const TYPE = filterKey('employment_type');
 const CATEGORY = filterKey('category_id');
 const ENGAGEMENT = filterKey('engagement_type');
 const STATUS = filterKey('status');
+const DEPARTMENT = filterKey('department_id');
+const DESIGNATION = filterKey('designation_id');
+const SECTION = filterKey('section_id');
 
 /**
  * Workforce → Workers / Employees / Profiles (P2.02): the manager's Worker and Employee Management pages. The cards
@@ -52,6 +55,10 @@ export function ProfilesPage({ type }: { readonly type?: EmploymentType }) {
   const categoryType: LookupType = shownType === 'employee' ? 'employee_category' : 'worker_category';
   const canRead = usePermission('lookup.view');
   const categories = useActiveLookups(categoryType, canRead && shownType !== undefined);
+  const departments = useActiveLookups('department', canRead);
+  const designations = useActiveLookups('designation', canRead);
+  const estateId = table.filters[ESTATE] ?? '';
+  const sections = useEstateSections(estateId);
   const noun = type === 'worker' ? 'workers' : type === 'employee' ? 'employees' : 'people';
   const none = <span className="text-fg-subtle">—</span>;
 
@@ -221,6 +228,26 @@ export function ProfilesPage({ type }: { readonly type?: EmploymentType }) {
                   (categories.data ?? []).map((row) => ({ id: row.id, label: lookupText(row, 'name') })),
                 )
               : null}
+            {select(
+              DEPARTMENT,
+              t('profiles.departmentFilter'),
+              t('profiles.anyDepartment'),
+              (departments.data ?? []).map((row) => ({ id: row.id, label: lookupText(row, 'name') })),
+            )}
+            {select(
+              DESIGNATION,
+              t('profiles.designationFilter'),
+              t('profiles.anyDesignation'),
+              (designations.data ?? []).map((row) => ({ id: row.id, label: lookupText(row, 'name') })),
+            )}
+            {estateId === ''
+              ? null
+              : select(
+                  SECTION,
+                  t('profiles.sectionFilter'),
+                  t('profiles.anySection'),
+                  sections.sections.map((section) => ({ id: section.id, label: section.name })),
+                )}
             {select(
               ENGAGEMENT,
               t('profiles.engagementFilter'),
