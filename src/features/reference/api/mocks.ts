@@ -47,6 +47,10 @@ function seed(): Store {
     ],
     designation: [plain('des1', 'MANAGER', 'Manager'), plain('des2', 'CLERK', 'Clerk', 20)],
     worker_category: [plain('wc1', 'PERMANENT', 'Permanent worker', 10, true)],
+    religion: [plain('r1', 'ISLAM', 'Islam', 10), plain('r2', 'HINDUISM', 'Hinduism', 20)],
+    education_level: [plain('e1', 'PRIMARY', 'Primary', 10), plain('e2', 'SECONDARY', 'Secondary', 20)],
+    skill: [plain('s1', 'PLUCKING', 'Plucking', 10), plain('s2', 'PRUNING', 'Pruning', 20)],
+    language: [plain('l1', 'BN', 'Bangla', 10), plain('l2', 'EN', 'English', 20)],
     tea_type: [
       { ...plain('tt1', 'CTC', 'CTC', 10), manufacture_process: 'ctc' },
       { ...plain('tt2', 'ORTHODOX', 'Orthodox', 20), manufacture_process: 'orthodox' },

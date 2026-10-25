@@ -13,6 +13,7 @@ type PageKey =
   | 'organisation'
   | 'estates'
   | 'fields'
+  | 'persons'
   | 'factories'
   | 'warehouses'
   | 'parties'
@@ -42,7 +43,12 @@ type PageKey =
   | 'designTokens';
 
 type GroupKey =
-  'estateManagement' | 'masterData' | 'accountsFinance' | 'userAdministration' | 'configuration';
+  | 'estateManagement'
+  | 'workforce'
+  | 'masterData'
+  | 'accountsFinance'
+  | 'userAdministration'
+  | 'configuration';
 
 interface AppNavPage {
   readonly id: string;
@@ -101,6 +107,20 @@ export const NAVIGATION: readonly AppNavSection[] = [
             href: '/documents/expiring',
             icon: 'file',
             permission: 'document.view',
+          },
+        ],
+      },
+      {
+        id: 'workforce',
+        groupKey: 'workforce',
+        icon: 'users',
+        pages: [
+          {
+            id: 'persons',
+            labelKey: 'persons',
+            href: '/workforce/persons',
+            icon: 'user',
+            permission: 'person.view',
           },
         ],
       },

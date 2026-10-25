@@ -1,5 +1,9 @@
 import { type RouteObject } from 'react-router';
 
+/** The estates a user may pick from (other features offer them as a "garden / unit" choice). */
+export { useAllEstates } from './api/hierarchy';
+export { ScopeNotice } from './components/ScopeNotice';
+
 /**
  * Published API of the organisation feature (P1.07): organisation settings, estates with their divisions and
  * sections, and fields. Pages are lazy; the app wraps each group in the permission guard it needs.

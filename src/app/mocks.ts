@@ -12,6 +12,7 @@ import { loadOrganisationMocks } from '@/features/organisation';
 import { loadReferenceMocks } from '@/features/reference';
 import { loadSystemMocks } from '@/features/system';
 import { loadWorkflowsMocks } from '@/features/workflows';
+import { loadWorkforceMocks } from '@/features/workforce';
 import { isFeatureMocked, type MockSetting, mockSetting } from '@/lib/mocks';
 
 /**
@@ -28,6 +29,7 @@ const FEATURE_MOCKS: Record<string, () => Promise<{ handlers: RequestHandler[] }
   health: loadHealthMocks,
   notifications: loadNotificationsMocks,
   workflows: loadWorkflowsMocks,
+  workforce: loadWorkforceMocks,
   admin: loadAdminMocks,
   // Before organisation: its estate-photo handlers answer the same /documents addresses, and the first match wins.
   documents: loadDocumentsMocks,
