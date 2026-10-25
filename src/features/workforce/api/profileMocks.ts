@@ -2,6 +2,9 @@ import { http, type RequestHandler } from 'msw';
 
 import { apiError, created, noContent, ok, page, requireAuth, requireIfMatch } from '@/lib/mocking/contract';
 
+import { Dec } from '@/lib/money';
+
+import { type Assignment } from './assignments';
 import { type Bucket, type Profile, type WorkforceSummary } from './profileSchemas';
 
 /**
@@ -118,7 +121,81 @@ function profile(
 
 interface Store {
   profiles: Profile[];
+  assignments: Assignment[];
   sequence: number;
+}
+
+function assignment(
+  id: string,
+  profileId: string,
+  fields: Partial<Assignment> & Pick<Assignment, 'effective_from'>,
+): Assignment {
+  return {
+    id,
+    employment_profile_id: profileId,
+    estate_id: ESTATE.id,
+    department_id: null,
+    department: null,
+    designation_id: null,
+    designation: null,
+    division_id: null,
+    division: null,
+    section_id: null,
+    section: null,
+    activity_type_id: null,
+    activity_type: null,
+    default_shift_id: null,
+    default_shift: null,
+    wage_basis: 'daily',
+    base_rate: null,
+    pay_lines: [],
+    total_pay: null,
+    effective_to: null,
+    change_reason: 'joining',
+    remarks: null,
+    is_wage_change: false,
+    is_retrospective: false,
+    state: 'approved',
+    is_current: true,
+    approval_id: null,
+    submitted_by: null,
+    approved_by: null,
+    rejection_reason: null,
+    version: 1,
+    ...fields,
+  };
+}
+
+const NAMES: Record<string, { code: string; name: string }> = {
+  dep1: { code: 'FIELD', name: 'Field' },
+  dep2: { code: 'FACTORY', name: 'Factory' },
+  des1: { code: 'MANAGER', name: 'Manager' },
+  des2: { code: 'CLERK', name: 'Clerk' },
+  s1: { code: 'N1', name: 'North 1' },
+  s2: { code: 'N2', name: 'North 2' },
+  at1: { code: 'PLUCKING', name: 'Plucking' },
+  at2: { code: 'PRUNING', name: 'Pruning' },
+};
+const named = (id: string | null) => {
+  if (id === null) return null;
+  const known = NAMES[id];
+  return { id, code: known?.code ?? id, name: known?.name ?? id };
+};
+
+/** An assignment with its named references and total worked out from the ids and lines it holds. */
+function withRefs(a: Assignment): Assignment {
+  const total =
+    a.pay_lines.length === 0
+      ? null
+      : a.pay_lines.reduce((sum, line) => sum.plus(line.amount), new Dec(0)).toFixed(4);
+  return {
+    ...a,
+    department: named(a.department_id),
+    designation: named(a.designation_id),
+    section: named(a.section_id),
+    activity_type: named(a.activity_type_id),
+    total_pay: total,
+  };
 }
 
 function fresh(): Store {
@@ -143,6 +220,26 @@ function fresh(): Store {
   });
   return {
     sequence: 100,
+    assignments: [
+      withRefs(
+        assignment('as1', 'pr1', {
+          effective_from: '2010-05-01',
+          department_id: 'dep1',
+          designation_id: 'des1',
+          wage_basis: 'monthly',
+          pay_lines: [{ component: 'basic', amount: '35000.0000' }],
+        }),
+      ),
+      withRefs(
+        assignment('as2', 'pr2', {
+          effective_from: '2025-09-20',
+          section_id: 's1',
+          activity_type_id: 'at1',
+          wage_basis: 'daily',
+          base_rate: '500.0000',
+        }),
+      ),
+    ],
     profiles: [
       boss,
       profile('pr2', 'p2', {
@@ -275,6 +372,10 @@ export function profileMocks(b: string): RequestHandler[] {
         const wanted = get(key);
         if (wanted) rows = rows.filter((p) => p[key] === wanted);
       }
+      for (const key of ['department', 'designation', 'section'] as const) {
+        const wanted = get(`${key}_id`);
+        if (wanted) rows = rows.filter((p) => p.current_assignment?.[key]?.id === wanted);
+      }
       const status = get('status');
       if (status) rows = rows.filter((p) => p.status === status);
       const statusIn = url.searchParams.get('filter[status][in]');
@@ -386,6 +487,90 @@ export function profileMocks(b: string): RequestHandler[] {
       if (refused) return refused;
       store.profiles = store.profiles.filter((p) => p.id !== params.id);
       return noContent();
+    }),
+    http.get(`${b}/employment-profiles/:id/assignments`, ({ request, params }) => {
+      const refused = requireAuth(request);
+      if (refused) return refused;
+      return ok(
+        store.assignments
+          .filter((a) => a.employment_profile_id === params.id)
+          .sort((x, y) => y.effective_from.localeCompare(x.effective_from)),
+      );
+    }),
+    http.post(`${b}/employment-profiles/:id/assignments`, async ({ request, params }) => {
+      const refused = requireAuth(request);
+      if (refused) return refused;
+      const mine = store.assignments.filter((a) => a.employment_profile_id === params.id);
+      if (mine.some((a) => a.state === 'draft' || a.state === 'submitted'))
+        return apiError(422, 'DUPLICATE_KEY', 'A change is already pending.', [
+          { field: 'employment_profile_id', code: 'DUPLICATE_KEY', message: 'A change is already pending.' },
+        ]);
+      const body = (await request.json()) as Partial<Assignment>;
+      const base = mine.find((a) => a.is_current);
+      store.sequence += 1;
+      const made = withRefs({
+        ...(base ?? assignment('', String(params.id), { effective_from: '' })),
+        ...body,
+        id: `as${String(store.sequence)}`,
+        employment_profile_id: String(params.id),
+        state: 'draft',
+        is_current: false,
+        effective_to: null,
+        approval_id: null,
+        version: 1,
+      });
+      store.assignments.push(made);
+      return created(made, `${b}/employment-assignments/${made.id}`, made.version);
+    }),
+    http.put(`${b}/employment-assignments/:id`, async ({ request, params }) => {
+      const found = store.assignments.find((a) => a.id === params.id);
+      if (!found) return apiError(404, 'NOT_FOUND', 'No such assignment.');
+      const refused = requireAuth(request) ?? requireIfMatch(request, found.version);
+      if (refused) return refused;
+      if (found.state !== 'draft') return apiError(409, 'INVALID_TRANSITION', 'Only a draft can be changed.');
+      const body = (await request.json()) as Partial<Assignment>;
+      const next = withRefs({ ...found, ...body, version: found.version + 1 });
+      store.assignments = store.assignments.map((a) => (a.id === found.id ? next : a));
+      return ok(next, { version: next.version });
+    }),
+    http.delete(`${b}/employment-assignments/:id`, ({ request, params }) => {
+      const refused = requireAuth(request);
+      if (refused) return refused;
+      const found = store.assignments.find((a) => a.id === params.id);
+      if (found && found.state !== 'draft')
+        return apiError(409, 'INVALID_TRANSITION', 'Only a draft can be deleted.');
+      store.assignments = store.assignments.filter((a) => a.id !== params.id);
+      return noContent();
+    }),
+    http.post(`${b}/employment-assignments/:id/submit`, ({ request, params }) => {
+      const found = store.assignments.find((a) => a.id === params.id);
+      if (!found) return apiError(404, 'NOT_FOUND', 'No such assignment.');
+      const refused = requireAuth(request) ?? requireIfMatch(request, found.version);
+      if (refused) return refused;
+      if (found.state !== 'draft')
+        return apiError(409, 'INVALID_TRANSITION', 'Only a draft can be submitted.');
+      const before = store.assignments.find(
+        (a) => a.employment_profile_id === found.employment_profile_id && a.is_current,
+      );
+      const pay = (a: Assignment | undefined) => JSON.stringify([a?.wage_basis, a?.base_rate, a?.pay_lines]);
+      const wageChange = before !== undefined && pay(before) !== pay(found);
+      let next: Assignment;
+      if (wageChange) {
+        next = {
+          ...found,
+          state: 'submitted',
+          is_wage_change: true,
+          approval_id: 'ap1',
+          version: found.version + 1,
+        };
+      } else {
+        next = { ...found, state: 'approved', is_current: true, version: found.version + 1 };
+        store.assignments = store.assignments.map((a) =>
+          a.id === before?.id ? { ...a, is_current: false, effective_to: '2026-10-31' } : a,
+        );
+      }
+      store.assignments = store.assignments.map((a) => (a.id === found.id ? next : a));
+      return ok(next, { version: next.version });
     }),
     http.get(`${b}/persons/:id/employment-profiles`, ({ request, params }) => {
       const refused = requireAuth(request);

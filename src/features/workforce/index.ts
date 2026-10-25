@@ -23,6 +23,7 @@ export const profileRoutes: RouteObject[] = [
     lazy: async () => ({ Component: (await import('./pages/ProfilesPage')).AllProfilesPage }),
   },
   { path: 'workforce/profiles/:id', lazy: () => import('./pages/ProfilePage') },
+  { path: 'workforce/profiles/:id/assignments', lazy: () => import('./pages/ProfileAssignmentsPage') },
 ];
 export const profileCreateRoutes: RouteObject[] = [
   { path: 'workforce/profiles/new', lazy: () => import('./pages/ProfilePage') },

@@ -4,10 +4,12 @@ import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { PageError, PageLoading, RefusalDialog } from '@/features/system';
 import { usePermission } from '@/lib/auth';
 import { useTranslation } from '@/lib/i18n';
-import { PageHeader, Stack } from '@/ui';
+import { useUrlTab } from '@/lib/urlState';
+import { PageHeader, Stack, Tabs } from '@/ui';
 
 import { useProfile } from '../api/profiles';
 import { EMPLOYMENT_TYPES, type Profile } from '../api/profileSchemas';
+import { AssignmentsPanel } from '../components/AssignmentsPanel';
 import { ProfileActions } from '../components/ProfileActions';
 import { ProfileForm } from '../components/ProfileForm';
 
@@ -65,6 +67,7 @@ function ProfileDetail({ profile }: { readonly profile: Profile }) {
   const canEdit = usePermission('employment.edit');
   const canApprove = usePermission('employment.approve');
   const canDelete = usePermission('employment.delete');
+  const tab = useUrlTab('tab', 'employment');
   const [refusal, setRefusal] = useState<unknown>(null);
   const list = profile.employment_type === 'worker' ? '/workforce/workers' : '/workforce/employees';
 
@@ -94,7 +97,22 @@ function ProfileDetail({ profile }: { readonly profile: Profile }) {
           />
         }
       />
-      <ProfileForm profile={profile} onRefused={setRefusal} />
+      <Tabs
+        label={t('form.tabsLabel')}
+        {...tab}
+        items={[
+          {
+            id: 'employment',
+            label: t('form.tabs.employment'),
+            content: <ProfileForm profile={profile} onRefused={setRefusal} />,
+          },
+          {
+            id: 'assignments',
+            label: t('form.tabs.assignments'),
+            content: <AssignmentsPanel profile={profile} onRefused={setRefusal} />,
+          },
+        ]}
+      />
       <RefusalDialog
         error={refusal}
         onClose={() => {
