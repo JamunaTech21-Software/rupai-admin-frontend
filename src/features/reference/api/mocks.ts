@@ -51,6 +51,8 @@ function seed(): Store {
     education_level: [plain('e1', 'PRIMARY', 'Primary', 10), plain('e2', 'SECONDARY', 'Secondary', 20)],
     skill: [plain('s1', 'PLUCKING', 'Plucking', 10), plain('s2', 'PRUNING', 'Pruning', 20)],
     language: [plain('l1', 'BN', 'Bangla', 10), plain('l2', 'EN', 'English', 20)],
+    employee_category: [plain('ec1', 'OFFICER', 'Officer', 10)],
+    job_grade: [plain('jg1', 'GRADE_1', 'Grade 1', 10), plain('jg2', 'GRADE_2', 'Grade 2', 20)],
     tea_type: [
       { ...plain('tt1', 'CTC', 'CTC', 10), manufacture_process: 'ctc' },
       { ...plain('tt2', 'ORTHODOX', 'Orthodox', 20), manufacture_process: 'orthodox' },

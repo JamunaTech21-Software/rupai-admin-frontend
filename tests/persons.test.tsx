@@ -201,6 +201,6 @@ describe('family members and life cycle', () => {
     await openAs('manager', '/workforce/persons/p1');
     await screen.findByRole('heading', { level: 1, name: 'Rahim Uddin' });
     await userEvent.click(screen.getByRole('tab', { name: 'Employment' }));
-    expect(await screen.findByText(/Available with P2\.02/)).toBeInTheDocument();
+    expect(await screen.findByText('Employment history')).toBeInTheDocument();
   });
 });
