@@ -115,8 +115,8 @@ describe('person form', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Karim Ali' })).toBeInTheDocument();
   });
 
-  it('opens a person with their details and saves a change', async () => {
-    await openAs('manager', '/workforce/persons/p1');
+  it('opens a person with their details, saves a change and returns to the list', async () => {
+    const router = await openAs('manager', '/workforce/persons/p1');
     await screen.findByRole('heading', { level: 1, name: 'Rahim Uddin' });
     expect(screen.getByRole('textbox', { name: /^Father name/ })).toHaveValue('Karim Uddin');
     expect(screen.getByRole('textbox', { name: /National ID/ })).toHaveValue('1985123456789');
@@ -125,9 +125,10 @@ describe('person form', () => {
     await userEvent.type(phone, '+8801711999999');
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => {
-      expect(screen.getByRole('textbox', { name: /^Mobile no/ })).toHaveValue('+8801711999999');
+      expect(router.state.location.pathname).toBe('/workforce/persons');
     });
-    expect(screen.getByText('Last updated')).toBeInTheDocument();
+    const table = await screen.findByRole('table', { name: 'Persons' });
+    expect(await within(table).findByText('+8801711999999')).toBeInTheDocument();
   });
 
   it('needs the account number when paying by bank', async () => {
@@ -162,7 +163,8 @@ describe('family members and life cycle', () => {
     expect(await within(table).findByText('New child')).toBeInTheDocument();
 
     await userEvent.click(within(table).getByRole('button', { name: 'Remove New child' }));
-    await userEvent.click(await screen.findByRole('button', { name: 'Remove' }));
+    const confirm = await screen.findByRole('alertdialog', { name: 'Remove New child?' });
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Remove' }));
     await waitFor(() => {
       expect(within(table).queryByText('New child')).not.toBeInTheDocument();
     });
@@ -173,7 +175,12 @@ describe('family members and life cycle', () => {
     await screen.findByRole('heading', { level: 1, name: 'Rahim Uddin' });
     await userEvent.click(screen.getByRole('button', { name: 'Deactivate' }));
     await userEvent.click(
-      within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Deactivate' }),
+      within(await screen.findByRole('alertdialog', { name: 'Deactivate Rahim Uddin?' })).getByRole(
+        'button',
+        {
+          name: 'Deactivate',
+        },
+      ),
     );
     expect(await screen.findByRole('button', { name: 'Reactivate' })).toBeInTheDocument();
   });
@@ -183,7 +190,9 @@ describe('family members and life cycle', () => {
     await screen.findByRole('heading', { level: 1, name: 'Nasima Khatun' });
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
     await userEvent.click(
-      within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Delete' }),
+      within(await screen.findByRole('alertdialog', { name: 'Delete Nasima Khatun?' })).getByRole('button', {
+        name: 'Delete',
+      }),
     );
     expect(await screen.findByText(/Deactivate them instead/)).toBeInTheDocument();
   });
@@ -192,6 +201,6 @@ describe('family members and life cycle', () => {
     await openAs('manager', '/workforce/persons/p1');
     await screen.findByRole('heading', { level: 1, name: 'Rahim Uddin' });
     await userEvent.click(screen.getByRole('tab', { name: 'Employment' }));
-    expect(await screen.findByText(/Available with P2\.02/)).toBeInTheDocument();
+    expect(await screen.findByText('Employment history')).toBeInTheDocument();
   });
 });

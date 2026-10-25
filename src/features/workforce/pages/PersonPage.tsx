@@ -12,6 +12,7 @@ import { usePerson } from '../api/persons';
 import { type Person } from '../api/schemas';
 import { DependentsPanel } from '../components/DependentsPanel';
 import { PersonForm } from '../components/PersonForm';
+import { PersonEmployment } from '../components/PersonEmployment';
 import { PersonLifecycle } from '../components/PersonLifecycle';
 
 /** Workforce → Persons → one person (or a new one): the personal form, family members, documents, employment. */
@@ -141,12 +142,7 @@ function PersonDetail({ person }: { readonly person: Person }) {
           {
             id: 'employment',
             label: t('person.tabs.employment'),
-            content: (
-              <Card title={t('person.sections.employment')} headingLevel={2}>
-                <p className="text-sm text-fg-muted">{t('person.employmentLater')}</p>
-                <p className="mt-2 text-sm text-fg-muted">{t('person.serviceLater')}</p>
-              </Card>
-            ),
+            content: <PersonEmployment personId={person.id} />,
           },
         ]}
       />

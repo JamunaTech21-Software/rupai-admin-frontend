@@ -16,7 +16,7 @@ import { homeRoutes } from '@/features/home';
 import { notificationRoutes, notificationRuleRoutes } from '@/features/notifications';
 import { allApprovalRoutes, approvalRoutes, delegationRoutes } from '@/features/approvals';
 import { healthRoutes } from '@/features/health';
-import { personCreateRoutes, personRoutes } from '@/features/workforce';
+import { personCreateRoutes, personRoutes, profileCreateRoutes, profileRoutes } from '@/features/workforce';
 import { importRoutes } from '@/features/imports';
 import { jobRoutes, scheduleRoutes } from '@/features/jobs';
 import { workflowCreateRoutes, workflowEditRoutes, workflowRoutes } from '@/features/workflows';
@@ -95,6 +95,11 @@ export const routes: RouteObject[] = [
               { element: <RequirePermission permission="field.view" />, children: fieldRoutes },
               { element: <RequirePermission permission="person.create" />, children: personCreateRoutes },
               { element: <RequirePermission permission="person.view" />, children: personRoutes },
+              {
+                element: <RequirePermission permission="employment.create" />,
+                children: profileCreateRoutes,
+              },
+              { element: <RequirePermission permission="employment.view" />, children: profileRoutes },
               { element: <RequirePermission permission="factory.create" />, children: factoryCreateRoutes },
               { element: <RequirePermission permission="factory.view" />, children: factoryRoutes },
               {

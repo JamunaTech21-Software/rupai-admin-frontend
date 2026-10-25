@@ -175,6 +175,7 @@ function RoleForm({
       } else {
         await update.mutateAsync(input);
         toast.success(t('role.saved'));
+        void navigate('/admin/roles');
       }
     } catch (error) {
       // The change broadens the role into a conflict or sensitive permission for users who hold it.
@@ -183,6 +184,7 @@ function RoleForm({
         askForAuthorisations(required, t('sod.roleSaveIntro', { name: role.name }), async (given) => {
           await update.mutateAsync({ ...input, authorisations: forHolders(given) });
           toast.success(t('role.saved'));
+          void navigate('/admin/roles');
         });
         return;
       }

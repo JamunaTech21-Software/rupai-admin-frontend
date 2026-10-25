@@ -98,6 +98,7 @@ function WarehouseEditor({ warehouse }: { readonly warehouse: Warehouse | null }
       if (warehouse) {
         await update.mutateAsync(input);
         toast.success(t('warehouse.saved'));
+        void navigate('/warehouses');
       } else {
         const created = await create.mutateAsync(input);
         toast.success(t('warehouse.created', { name: created.name }));

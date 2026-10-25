@@ -98,6 +98,7 @@ function PartyEditor({ party }: { readonly party: Party | null }) {
       if (party) {
         await update.mutateAsync(input);
         toast.success(t('party.saved'));
+        void navigate('/parties');
       } else {
         const created = await create.mutateAsync(input);
         toast.success(t('party.created', { name: created.name }));

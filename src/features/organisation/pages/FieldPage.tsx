@@ -318,6 +318,7 @@ function FieldForm({ field }: { readonly field: Field | null }) {
       } else {
         await update.mutateAsync(input);
         toast.success(t('field.saved'));
+        void navigate('/fields');
       }
     } catch (error) {
       if (errorBehaviour(error) === 'conflict') return;

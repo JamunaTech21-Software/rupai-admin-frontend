@@ -2,6 +2,7 @@ import { http, type RequestHandler } from 'msw';
 
 import { apiError, created, noContent, ok, page, requireAuth, requireIfMatch } from '@/lib/mocking/contract';
 
+import { profileMocks, resetProfileMocks } from './profileMocks';
 import { type Dependent, type Person } from './schemas';
 
 /**
@@ -144,6 +145,7 @@ let store = fresh();
 /** Back to the starting people (tests call this in beforeEach). */
 export function resetWorkforceMocks() {
   store = fresh();
+  resetProfileMocks();
 }
 
 const countOf = (personId: string) => store.dependents.filter((d) => d.person_id === personId).length;
@@ -177,6 +179,7 @@ export function workforceMocks(b: string): RequestHandler[] {
     ]);
 
   return [
+    ...profileMocks(b),
     http.get(`${b}/persons`, ({ request }) => {
       const refused = requireAuth(request);
       if (refused) return refused;

@@ -70,6 +70,7 @@ function FiscalYearView({ year }: { readonly year: FiscalYear }) {
     try {
       await update.mutateAsync({ code: values.code.trim(), name: values.name.trim() });
       toast.success(t('fiscalYear.saved'));
+      void navigate('/fiscal-years');
     } catch (error) {
       if (errorBehaviour(error) === 'conflict') return;
       if (errorBehaviour(error) === 'field-errors' && isApiError(error)) {

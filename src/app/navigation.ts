@@ -14,6 +14,8 @@ type PageKey =
   | 'estates'
   | 'fields'
   | 'persons'
+  | 'workers'
+  | 'employees'
   | 'factories'
   | 'warehouses'
   | 'parties'
@@ -121,6 +123,20 @@ export const NAVIGATION: readonly AppNavSection[] = [
             href: '/workforce/persons',
             icon: 'user',
             permission: 'person.view',
+          },
+          {
+            id: 'workers',
+            labelKey: 'workers',
+            href: '/workforce/workers',
+            icon: 'users',
+            permission: 'employment.view',
+          },
+          {
+            id: 'employees',
+            labelKey: 'employees',
+            href: '/workforce/employees',
+            icon: 'user',
+            permission: 'employment.view',
           },
         ],
       },

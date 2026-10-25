@@ -23,6 +23,7 @@ export function usePerson(id: string) {
   return useQuery({
     ...cachePolicy('master'),
     queryKey: personKeys.detail(id),
+    enabled: id !== '',
     queryFn: async ({ signal }) => (await api.get(`/persons/${id}`, { schema: PersonSchema, signal })).data,
   });
 }
@@ -173,4 +174,29 @@ export function useRemoveDependent(personId: string, dependent: Pick<Dependent, 
     },
     invalidates: () => [dependentsKey(personId), personKeys.all],
   });
+}
+
+/** One page of a person search for a picker (GET /persons?filter[q]=…): the next page's number is the cursor. */
+export async function searchPersons(query: string, cursor: string | null, signal: AbortSignal) {
+  const pageNumber = cursor === null ? 1 : Number.parseInt(cursor, 10);
+  const response = await api.get('/persons', {
+    query: {
+      'filter[q]': query,
+      'filter[status]': 'active',
+      per_page: 20,
+      page: pageNumber,
+      sort: 'full_name',
+    },
+    schema: z.array(PersonSchema),
+    signal,
+  });
+  const pagination = response.meta?.pagination;
+  return {
+    items: response.data.map((person) => ({
+      id: person.id,
+      label: person.full_name,
+      description: [person.person_code, person.phone].filter(Boolean).join(' · '),
+    })),
+    nextCursor: pagination && pagination.page < pagination.last_page ? String(pagination.page + 1) : null,
+  };
 }

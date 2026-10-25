@@ -127,6 +127,7 @@ function SeasonEditor({ season }: { readonly season: Season | null }) {
       if (season) {
         await update.mutateAsync(input);
         toast.success(t('season.saved'));
+        void navigate('/seasons');
       } else {
         const created = await create.mutateAsync({ ...input, estate_id: values.estate_id });
         toast.success(t('season.created', { name: created.name }));

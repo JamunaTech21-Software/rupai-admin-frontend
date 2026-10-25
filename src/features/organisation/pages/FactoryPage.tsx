@@ -94,6 +94,7 @@ function FactoryEditor({ factory }: { readonly factory: Factory | null }) {
       if (factory) {
         await update.mutateAsync(input);
         toast.success(t('factory.saved'));
+        void navigate('/factories');
       } else {
         const created = await create.mutateAsync(input);
         toast.success(t('factory.created', { name: created.name }));
