@@ -174,9 +174,9 @@ describe('reference data', () => {
   });
 
   it('shows the first-use empty state for a master with no rows', async () => {
-    await openAs('manager', '/masters/leave-type');
-    expect(await screen.findByText('No leave types yet')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Add leave type' }).length).toBeGreaterThan(0);
+    await openAs('manager', '/masters/land-type');
+    expect(await screen.findByText('No land types yet')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Add land type' }).length).toBeGreaterThan(0);
   });
 
   it('shows each master its own fields: shifts with estate, times and overnight', async () => {

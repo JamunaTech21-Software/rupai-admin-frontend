@@ -21,6 +21,7 @@ export function LookupPick({
   current,
   onChange,
   isDisabled,
+  error,
 }: {
   readonly type: LookupType;
   readonly label: string;
@@ -28,6 +29,7 @@ export function LookupPick({
   readonly current: { readonly id: string; readonly name: string } | null;
   readonly onChange: (id: string | null) => void;
   readonly isDisabled?: boolean;
+  readonly error?: string | undefined;
 }) {
   const { t } = useTranslation('workforce');
   const canRead = usePermission('lookup.view');
@@ -45,6 +47,7 @@ export function LookupPick({
       onChange={(next) => {
         onChange(next === null || next === NONE ? null : next);
       }}
+      {...(error ? { error } : {})}
     />
   );
 }

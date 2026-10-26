@@ -2,7 +2,11 @@ import { http, type RequestHandler } from 'msw';
 
 import { apiError, created, noContent, ok, page, requireAuth, requireIfMatch } from '@/lib/mocking/contract';
 
+import { benefitMocks, resetBenefitMocks } from './benefitMocks';
+import { performanceMocks, resetPerformanceMocks } from './performanceMocks';
+import { resetTrainingMocks, trainingMocks } from './trainingMocks';
 import { contractorMocks, resetContractorMocks } from './contractorMocks';
+import { leaveMocks, resetLeaveMocks } from './leaveMocks';
 import { profileMocks, resetProfileMocks } from './profileMocks';
 import { resetTeamMocks, teamMocks } from './teamMocks';
 import { type Dependent, type Person } from './schemas';
@@ -150,6 +154,10 @@ export function resetWorkforceMocks() {
   resetProfileMocks();
   resetTeamMocks();
   resetContractorMocks();
+  resetLeaveMocks();
+  resetBenefitMocks();
+  resetTrainingMocks();
+  resetPerformanceMocks();
 }
 
 const countOf = (personId: string) => store.dependents.filter((d) => d.person_id === personId).length;
@@ -186,6 +194,10 @@ export function workforceMocks(b: string): RequestHandler[] {
     ...profileMocks(b),
     ...teamMocks(b),
     ...contractorMocks(b),
+    ...leaveMocks(b),
+    ...benefitMocks(b),
+    ...trainingMocks(b),
+    ...performanceMocks(b),
     http.get(`${b}/persons`, ({ request }) => {
       const refused = requireAuth(request);
       if (refused) return refused;
