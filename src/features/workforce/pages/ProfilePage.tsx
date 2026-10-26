@@ -10,6 +10,8 @@ import { PageHeader, Stack, Tabs } from '@/ui';
 import { useProfile } from '../api/profiles';
 import { EMPLOYMENT_TYPES, type Profile } from '../api/profileSchemas';
 import { AssignmentsPanel } from '../components/AssignmentsPanel';
+import { ProfileBenefits } from '../components/ProfileBenefits';
+import { ProfileTrainings } from '../components/ProfileTrainings';
 import { ProfileActions } from '../components/ProfileActions';
 import { ProfileForm } from '../components/ProfileForm';
 import { TeamsOfWorker } from '../components/TeamsOfWorker';
@@ -112,12 +114,22 @@ function ProfileDetail({ profile }: { readonly profile: Profile }) {
             label: t('form.tabs.assignments'),
             content: <AssignmentsPanel profile={profile} onRefused={setRefusal} />,
           },
+          {
+            id: 'training',
+            label: t('training.tab'),
+            content: <ProfileTrainings profileId={profile.id} />,
+          },
           ...(profile.employment_type === 'worker'
             ? [
                 {
                   id: 'teams',
                   label: t('form.tabs.teams'),
                   content: <TeamsOfWorker profileId={profile.id} />,
+                },
+                {
+                  id: 'benefits',
+                  label: t('benefits.card'),
+                  content: <ProfileBenefits profileId={profile.id} profileName={profile.person.full_name} />,
                 },
               ]
             : []),

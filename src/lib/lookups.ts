@@ -48,6 +48,8 @@ export const LOOKUP_TYPES = [
   'language',
   'job_grade',
   'trade_category',
+  'benefit_type',
+  'evaluation_criteria',
   'uom',
   'currency',
   'country',

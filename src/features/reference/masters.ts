@@ -60,7 +60,17 @@ export type MasterFieldName =
   | 'decimal_places'
   | 'iso2'
   | 'iso3'
-  | 'dialling_code';
+  | 'dialling_code'
+  | 'annual_days'
+  | 'carry_forward_limit_days'
+  | 'allows_negative_balance'
+  | 'is_paid'
+  | 'applies_to'
+  | 'benefit_category'
+  | 'issue_frequency'
+  | 'default_employer_cost'
+  | 'uom_id'
+  | 'payroll_treatment';
 
 export interface MasterField {
   readonly name: MasterFieldName;
@@ -145,6 +155,25 @@ export const MANUFACTURE_PROCESSES = ['ctc', 'orthodox', 'green', 'oolong', 'whi
 export const GRADE_CATEGORIES = ['leaf', 'broken', 'fannings', 'dust'] as const;
 export const COST_CATEGORIES = ['cultivation', 'maintenance', 'protection', 'harvesting', 'other'] as const;
 export const VARIETY_TYPES = ['clonal', 'seedling', 'hybrid'] as const;
+export const LEAVE_APPLIES_TO = ['all', 'worker', 'employee'] as const;
+export const BENEFIT_CATEGORIES = [
+  'housing',
+  'medical',
+  'transport',
+  'ration',
+  'education',
+  'utility',
+  'other',
+] as const;
+export const ISSUE_FREQUENCIES = [
+  'one_time',
+  'weekly',
+  'monthly',
+  'quarterly',
+  'annual',
+  'on_demand',
+] as const;
+export const PAYROLL_TREATMENTS = ['not_payroll', 'taxable_perquisite', 'cash_component'] as const;
 
 export const MASTER_TYPES: readonly MasterType[] = [
   // ---- People ----
@@ -153,7 +182,36 @@ export const MASTER_TYPES: readonly MasterType[] = [
   common('worker_category', 'people'),
   common('employee_category', 'people'),
   common('employment_type', 'people'),
-  common('leave_type', 'people'),
+  common(
+    'benefit_type',
+    'people',
+    [
+      {
+        name: 'benefit_category',
+        type: { kind: 'enum', values: BENEFIT_CATEGORIES },
+        isRequired: true,
+        isColumn: true,
+        filter: true,
+      },
+      { name: 'issue_frequency', type: { kind: 'enum', values: ISSUE_FREQUENCIES }, isColumn: true },
+      { name: 'default_employer_cost', type: { kind: 'decimal', decimal: 'money' }, isColumn: 'optional' },
+      { name: 'uom_id', type: { kind: 'ref', to: 'uom' }, isColumn: 'optional' },
+      {
+        name: 'payroll_treatment',
+        type: { kind: 'enum', values: PAYROLL_TREATMENTS },
+        isReadOnly: true,
+        isColumn: 'optional',
+      },
+    ],
+    { permission: 'benefit' },
+  ),
+  common('leave_type', 'people', [
+    { name: 'annual_days', type: { kind: 'decimal', decimal: 'pct' }, isColumn: true },
+    { name: 'carry_forward_limit_days', type: { kind: 'decimal', decimal: 'pct' }, isColumn: 'optional' },
+    { name: 'allows_negative_balance', type: { kind: 'bool' }, isColumn: 'optional' },
+    { name: 'is_paid', type: { kind: 'bool' }, isColumn: true },
+    { name: 'applies_to', type: { kind: 'enum', values: LEAVE_APPLIES_TO }, isColumn: true, filter: true },
+  ]),
   common(
     'shift',
     'people',

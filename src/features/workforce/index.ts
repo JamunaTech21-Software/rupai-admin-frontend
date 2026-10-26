@@ -44,6 +44,49 @@ export const contractorRoutes: RouteObject[] = [
 export const contractorCreateRoutes: RouteObject[] = [
   { path: 'workforce/contractors/new', lazy: () => import('./pages/ContractorPage') },
 ];
+/** Leave: requests, one request, and the balances (P2.07). */
+export const leaveRoutes: RouteObject[] = [
+  { path: 'hr/leave', lazy: () => import('./pages/LeavePage') },
+  { path: 'hr/leave/balances', lazy: () => import('./pages/LeaveBalancesPage') },
+  { path: 'hr/leave/:id', lazy: () => import('./pages/LeaveRequestPage') },
+];
+export const leaveCreateRoutes: RouteObject[] = [
+  { path: 'hr/leave/new', lazy: () => import('./pages/LeaveRequestPage') },
+];
+/** Benefits (entitlements and issues) and welfare cases (P2.08). */
+export const benefitRoutes: RouteObject[] = [
+  { path: 'hr/benefits', lazy: () => import('./pages/BenefitsPage') },
+];
+export const welfareRoutes: RouteObject[] = [
+  { path: 'hr/welfare', lazy: () => import('./pages/WelfarePage') },
+  { path: 'hr/welfare/:id', lazy: () => import('./pages/WelfareCasePage') },
+];
+export const welfareCreateRoutes: RouteObject[] = [
+  { path: 'hr/welfare/new', lazy: () => import('./pages/WelfareCasePage') },
+];
+/** Training programmes (P2.09). */
+export const trainingRoutes: RouteObject[] = [
+  { path: 'hr/training', lazy: () => import('./pages/TrainingPage') },
+  { path: 'hr/training/:id', lazy: () => import('./pages/TrainingProgramPage') },
+];
+export const trainingCreateRoutes: RouteObject[] = [
+  { path: 'hr/training/new', lazy: () => import('./pages/TrainingProgramPage') },
+];
+/** Goals (overview, list, calendar) and evaluations (P2.10). */
+export const goalRoutes: RouteObject[] = [
+  { path: 'hr/goals', lazy: () => import('./pages/GoalsPage') },
+  { path: 'hr/goals/:id', lazy: () => import('./pages/GoalPage') },
+];
+export const goalCreateRoutes: RouteObject[] = [
+  { path: 'hr/goals/new', lazy: () => import('./pages/GoalPage') },
+];
+export const evaluationRoutes: RouteObject[] = [
+  { path: 'hr/evaluations', lazy: () => import('./pages/EvaluationsPage') },
+  { path: 'hr/evaluations/:id', lazy: () => import('./pages/EvaluationPage') },
+];
+export const evaluationCreateRoutes: RouteObject[] = [
+  { path: 'hr/evaluations/new', lazy: () => import('./pages/EvaluationPage') },
+];
 export const personCreateRoutes: RouteObject[] = [
   { path: 'workforce/persons/new', lazy: () => import('./pages/PersonPage') },
 ];

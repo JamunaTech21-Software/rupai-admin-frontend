@@ -18,6 +18,13 @@ type PageKey =
   | 'employees'
   | 'teams'
   | 'contractors'
+  | 'leaveRequests'
+  | 'leaveBalances'
+  | 'benefits'
+  | 'welfare'
+  | 'training'
+  | 'goals'
+  | 'evaluations'
   | 'factories'
   | 'warehouses'
   | 'parties'
@@ -49,6 +56,7 @@ type PageKey =
 type GroupKey =
   | 'estateManagement'
   | 'workforce'
+  | 'hr'
   | 'masterData'
   | 'accountsFinance'
   | 'userAdministration'
@@ -153,6 +161,62 @@ export const NAVIGATION: readonly AppNavSection[] = [
             href: '/workforce/contractors',
             icon: 'user',
             permission: 'contractor.view',
+          },
+        ],
+      },
+      {
+        id: 'hr',
+        groupKey: 'hr',
+        icon: 'calendar',
+        pages: [
+          {
+            id: 'leave-requests',
+            labelKey: 'leaveRequests',
+            href: '/hr/leave',
+            icon: 'calendar',
+            permission: 'leave.view',
+          },
+          {
+            id: 'leave-balances',
+            labelKey: 'leaveBalances',
+            href: '/hr/leave/balances',
+            icon: 'clock',
+            permission: 'leave.view',
+          },
+          {
+            id: 'benefits',
+            labelKey: 'benefits',
+            href: '/hr/benefits',
+            icon: 'package',
+            permission: 'benefit.view',
+          },
+          {
+            id: 'welfare',
+            labelKey: 'welfare',
+            href: '/hr/welfare',
+            icon: 'users',
+            permission: 'welfare.view',
+          },
+          {
+            id: 'training',
+            labelKey: 'training',
+            href: '/hr/training',
+            icon: 'clipboard',
+            permission: 'training.view',
+          },
+          {
+            id: 'goals',
+            labelKey: 'goals',
+            href: '/hr/goals',
+            icon: 'chart',
+            permission: 'goal.view',
+          },
+          {
+            id: 'evaluations',
+            labelKey: 'evaluations',
+            href: '/hr/evaluations',
+            icon: 'checkCircle',
+            permission: 'evaluation.view',
           },
         ],
       },

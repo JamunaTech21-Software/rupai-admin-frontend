@@ -252,3 +252,28 @@ export function useEstateWorkers(estateId: string | null) {
       ).data,
   });
 }
+
+/** One page of a search of employment profiles for a picker (a covering colleague, someone else's leave). */
+export async function searchProfiles(query: string, cursor: string | null, signal: AbortSignal) {
+  const pageNumber = cursor === null ? 1 : Number.parseInt(cursor, 10);
+  const response = await api.get('/employment-profiles', {
+    query: {
+      'filter[q]': query,
+      'filter[status][in]': 'active,suspended,on_leave',
+      per_page: 20,
+      page: pageNumber,
+      sort: 'profile_number',
+    },
+    schema: z.array(ProfileSchema),
+    signal,
+  });
+  const pagination = response.meta?.pagination;
+  return {
+    items: response.data.map((profile) => ({
+      id: profile.id,
+      label: `${profile.person.full_name} (${profile.profile_number})`,
+      description: profile.estate.code,
+    })),
+    nextCursor: pagination && pagination.page < pagination.last_page ? String(pagination.page + 1) : null,
+  };
+}
